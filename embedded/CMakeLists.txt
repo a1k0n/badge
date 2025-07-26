@@ -26,6 +26,9 @@ target_include_directories(${TARGET_NAME} PRIVATE
     include
 )
 
+# Set the output name to include .elf extension
+set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME badge_embedded.elf)
+
 # Create map/bin/hex/uf2 file in addition to ELF
 pico_add_extra_outputs(${TARGET_NAME})
 
