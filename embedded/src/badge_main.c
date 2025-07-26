@@ -42,6 +42,9 @@ void badge_run(badge_context_t *ctx) {
     printf("Starting badge main loop\n");
     
     while (ctx->running) {
+        // Advance frame for animations
+        badge_advance_frame(&ctx->renderer);
+        
         badge_render_frame(ctx);
         ctx->frame_count++;
         
@@ -50,7 +53,7 @@ void badge_run(badge_context_t *ctx) {
         
         // Print frame count periodically
         if (ctx->frame_count % 300 == 0) { // Every 10 seconds at 30 FPS
-            printf("Frame count: %lu\n", ctx->frame_count);
+            printf("Frame: %lu, Renderer frame: %lu\n", ctx->frame_count, ctx->renderer.frame_count);
         }
     }
 }
@@ -65,21 +68,13 @@ void badge_shutdown(badge_context_t *ctx) {
 }
 
 void badge_render_frame(badge_context_t *ctx) {
-    // For now, render a test pattern
-    badge_render_test_pattern(ctx);
-}
-
-void badge_render_test_pattern(badge_context_t *ctx) {
-    // Render the display scanline by scanline
+    // Racing-the-beam rendering: generate each scanline on demand and write to display
     for (uint16_t y = 0; y < BADGE_DISPLAY_HEIGHT; y++) {
-        // Generate test pattern for this scanline
-        badge_test_pattern_scanline(&ctx->scanline_buffer, y);
-        
-        // Render full width scanline
-        badge_render_scanline(&ctx->renderer, &ctx->scanline_buffer, 0, y, BADGE_DISPLAY_WIDTH);
+        // Generate scanline pixels using racing-the-beam renderer
+        badge_render_scanline(&ctx->renderer, ctx->scanline_buffer, 0, y, BADGE_DISPLAY_WIDTH);
         
         // Write scanline to display using DMA for efficiency
-        gc9a01_write_scanline_dma(&ctx->display, &ctx->scanline_buffer);
+        gc9a01_write_scanline_dma(&ctx->display, ctx->scanline_buffer, 0, y, BADGE_DISPLAY_WIDTH);
         
         // For very fast updates, we might want to wait for DMA completion
         // but for a test pattern at 30 FPS, the next scanline setup time

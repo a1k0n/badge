@@ -16,7 +16,7 @@ typedef struct {
     SDL_Texture *texture;
     
     badge_renderer_t renderer;
-    badge_scanline_t scanline_buffer;
+    badge_color_t scanline_buffer[BADGE_DISPLAY_WIDTH]; // Racing-the-beam scanline buffer
     badge_color_t framebuffer[BADGE_DISPLAY_WIDTH * BADGE_DISPLAY_HEIGHT];
     
     uint32_t frame_count;
@@ -37,7 +37,6 @@ void desktop_handle_events(desktop_context_t *ctx);
 
 // Rendering functions
 void desktop_render_frame(desktop_context_t *ctx);
-void desktop_render_test_pattern(desktop_context_t *ctx);
 void desktop_update_display(desktop_context_t *ctx);
 
 // Utility functions

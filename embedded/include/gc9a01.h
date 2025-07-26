@@ -63,9 +63,11 @@ void gc9a01_write_data_dma(gc9a01_t *display, const uint8_t *data, size_t len);
 // Window/region setting
 void gc9a01_set_window(gc9a01_t *display, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
 
-// Scanline rendering functions
-void gc9a01_write_scanline(gc9a01_t *display, const badge_scanline_t *scanline);
-void gc9a01_write_scanline_dma(gc9a01_t *display, const badge_scanline_t *scanline);
+// Racing-the-beam scanline rendering functions
+void gc9a01_write_scanline(gc9a01_t *display, const badge_color_t *pixels, 
+                          uint16_t x_offset, uint16_t y, uint16_t width);
+void gc9a01_write_scanline_dma(gc9a01_t *display, const badge_color_t *pixels, 
+                              uint16_t x_offset, uint16_t y, uint16_t width);
 
 // DMA management
 bool gc9a01_dma_is_busy(gc9a01_t *display);

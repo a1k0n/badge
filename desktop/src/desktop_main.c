@@ -13,7 +13,7 @@ bool desktop_init(desktop_context_t *ctx) {
     
     // Create window
     ctx->window = SDL_CreateWindow(
-        "Badge Emulator",
+        "Badge Emulator - Racing the Beam",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         DESKTOP_WINDOW_WIDTH,
@@ -70,6 +70,7 @@ bool desktop_init(desktop_context_t *ctx) {
     printf("Desktop emulator initialized successfully\n");
     printf("Window size: %dx%d (scale factor: %d)\n", 
            DESKTOP_WINDOW_WIDTH, DESKTOP_WINDOW_HEIGHT, DESKTOP_SCALE_FACTOR);
+    printf("Racing-the-beam renderer with animated scrolling test pattern\n");
     
     return true;
 }
@@ -84,6 +85,9 @@ void desktop_run(desktop_context_t *ctx) {
         desktop_handle_events(ctx);
         
         if (!ctx->running) break;
+        
+        // Advance frame for animations
+        badge_advance_frame(&ctx->renderer);
         
         // Render frame
         desktop_render_frame(ctx);
@@ -103,7 +107,8 @@ void desktop_run(desktop_context_t *ctx) {
         if (ctx->frame_count % 300 == 0) { // Every 10 seconds at 30 FPS
             uint32_t current_time = SDL_GetTicks();
             float fps = 300.0f / ((current_time - ctx->last_frame_time) / 1000.0f);
-            printf("Frame count: %u, FPS: %.1f\n", ctx->frame_count, fps);
+            printf("Frame: %u, Renderer frame: %u, FPS: %.1f\n", 
+                   ctx->frame_count, ctx->renderer.frame_count, fps);
             ctx->last_frame_time = current_time;
         }
     }
@@ -149,18 +154,12 @@ void desktop_handle_events(desktop_context_t *ctx) {
 }
 
 void desktop_render_frame(desktop_context_t *ctx) {
-    // For now, render a test pattern
-    desktop_render_test_pattern(ctx);
-}
-
-void desktop_render_test_pattern(desktop_context_t *ctx) {
-    // Render the display scanline by scanline (same as embedded)
+    // Racing-the-beam rendering: generate each scanline on demand
     for (uint16_t y = 0; y < BADGE_DISPLAY_HEIGHT; y++) {
-        // Generate test pattern for this scanline
-        badge_test_pattern_scanline(&ctx->scanline_buffer, y);
+        // Render full width scanline directly into scanline buffer
+        badge_render_scanline(&ctx->renderer, ctx->scanline_buffer, 0, y, BADGE_DISPLAY_WIDTH);
         
-        // Render full width scanline (this updates our framebuffer)
-        badge_render_scanline(&ctx->renderer, &ctx->scanline_buffer, 0, y, BADGE_DISPLAY_WIDTH);
+        // The renderer automatically updates our framebuffer since we passed it during init
     }
 }
 

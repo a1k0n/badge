@@ -166,32 +166,26 @@ void gc9a01_set_window(gc9a01_t *display, uint16_t x0, uint16_t y0, uint16_t x1,
     gc9a01_write_command(display, GC9A01_RAMWR);
 }
 
-void gc9a01_write_scanline(gc9a01_t *display, const badge_scanline_t *scanline) {
-    if (!display->initialized || scanline->width == 0) return;
+void gc9a01_write_scanline(gc9a01_t *display, const badge_color_t *pixels, 
+                          uint16_t x_offset, uint16_t y, uint16_t width) {
+    if (!display->initialized || width == 0) return;
     
     // Set window for this scanline
-    gc9a01_set_window(display, 
-                     scanline->x_offset, 
-                     scanline->y_coord,
-                     scanline->x_offset + scanline->width - 1, 
-                     scanline->y_coord);
+    gc9a01_set_window(display, x_offset, y, x_offset + width - 1, y);
     
     // Write pixel data (RGB565 is already in the correct format)
-    gc9a01_write_data(display, (const uint8_t*)scanline->pixels, scanline->width * 2);
+    gc9a01_write_data(display, (const uint8_t*)pixels, width * 2);
 }
 
-void gc9a01_write_scanline_dma(gc9a01_t *display, const badge_scanline_t *scanline) {
-    if (!display->initialized || scanline->width == 0) return;
+void gc9a01_write_scanline_dma(gc9a01_t *display, const badge_color_t *pixels, 
+                              uint16_t x_offset, uint16_t y, uint16_t width) {
+    if (!display->initialized || width == 0) return;
     
     // Set window for this scanline
-    gc9a01_set_window(display, 
-                     scanline->x_offset, 
-                     scanline->y_coord,
-                     scanline->x_offset + scanline->width - 1, 
-                     scanline->y_coord);
+    gc9a01_set_window(display, x_offset, y, x_offset + width - 1, y);
     
     // Write pixel data using DMA
-    gc9a01_write_data_dma(display, (const uint8_t*)scanline->pixels, scanline->width * 2);
+    gc9a01_write_data_dma(display, (const uint8_t*)pixels, width * 2);
 }
 
 bool gc9a01_dma_is_busy(gc9a01_t *display) {

@@ -9,9 +9,16 @@ void badge_renderer_init(badge_renderer_t *renderer, badge_color_t *framebuffer)
     renderer->center_y = BADGE_DISPLAY_HEIGHT / 2;
     renderer->radius = BADGE_DISPLAY_WIDTH / 2;
     renderer->use_circular_clipping = false;
+    renderer->frame_count = 0;
+    renderer->time_ms = 0;
 }
 
-void badge_render_scanline(badge_renderer_t *renderer, badge_scanline_t *scanline,
+void badge_advance_frame(badge_renderer_t *renderer) {
+    renderer->frame_count++;
+    renderer->time_ms += 33; // Assume ~30 FPS
+}
+
+void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
                           uint16_t x_offset, uint16_t y, uint16_t width) {
     // Bounds checking
     if (y >= renderer->display_height) return;
@@ -22,32 +29,25 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_scanline_t *scanlin
         width = renderer->display_width - x_offset;
     }
     
-    // Update scanline metadata
-    scanline->x_offset = x_offset;
-    scanline->y_coord = y;
-    scanline->width = width;
+    // Generate animated test pattern scanline
+    // Add vertical scroll animation using frame counter
+    uint16_t animated_y = (y + renderer->frame_count) % (renderer->display_height * 2);
+    
+    for (uint16_t i = 0; i < width; i++) {
+        uint16_t x = x_offset + i;
+        
+        // Create animated test pattern with gradients and scrolling
+        uint8_t r = (x * 31) / renderer->display_width;
+        uint8_t g = (animated_y * 63) / (renderer->display_height * 2);
+        uint8_t b = ((x + animated_y) * 31) / (renderer->display_width + renderer->display_height * 2);
+        
+        pixels[i] = BADGE_RGB565(r, g, b);
+    }
     
     // If we have a framebuffer (desktop mode), copy scanline data
     if (renderer->framebuffer) {
         badge_color_t *dest = &renderer->framebuffer[y * renderer->display_width + x_offset];
-        memcpy(dest, scanline->pixels, width * sizeof(badge_color_t));
-    }
-}
-
-void badge_fill_scanline(badge_scanline_t *scanline, badge_color_t color) {
-    for (int i = 0; i < BADGE_DISPLAY_WIDTH; i++) {
-        scanline->pixels[i] = color;
-    }
-}
-
-void badge_test_pattern_scanline(badge_scanline_t *scanline, uint16_t y) {
-    for (int x = 0; x < BADGE_DISPLAY_WIDTH; x++) {
-        // Create a test pattern with gradients and stripes
-        uint8_t r = (x * 31) / BADGE_DISPLAY_WIDTH;
-        uint8_t g = (y * 63) / BADGE_DISPLAY_HEIGHT;
-        uint8_t b = ((x + y) * 31) / (BADGE_DISPLAY_WIDTH + BADGE_DISPLAY_HEIGHT);
-        
-        scanline->pixels[x] = BADGE_RGB565(r, g, b);
+        memcpy(dest, pixels, width * sizeof(badge_color_t));
     }
 }
 

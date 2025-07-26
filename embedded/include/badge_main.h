@@ -8,7 +8,7 @@
 typedef struct {
     gc9a01_t display;
     badge_renderer_t renderer;
-    badge_scanline_t scanline_buffer;
+    badge_color_t scanline_buffer[BADGE_DISPLAY_WIDTH]; // Racing-the-beam scanline buffer
     uint32_t frame_count;
     bool running;
 } badge_context_t;
@@ -20,6 +20,5 @@ void badge_shutdown(badge_context_t *ctx);
 
 // Rendering functions
 void badge_render_frame(badge_context_t *ctx);
-void badge_render_test_pattern(badge_context_t *ctx);
 
 #endif // BADGE_MAIN_H 
