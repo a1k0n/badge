@@ -132,7 +132,7 @@ void gc9a01_write_data_dma(gc9a01_t *display, const uint8_t *data, size_t len) {
         return;
     }
     
-    // Wait for any previous DMA transfer to complete
+    // Wait for any previous DMA transfer to complete first
     gc9a01_dma_wait(display);
     
     gpio_put(display->config.pin_cs, 0);
@@ -143,6 +143,7 @@ void gc9a01_write_data_dma(gc9a01_t *display, const uint8_t *data, size_t len) {
     dma_channel_set_trans_count(display->config.dma_channel, len, true);
     
     display->dma_busy = true;
+    // Note: CS will be released when DMA completes (in gc9a01_dma_wait or gc9a01_dma_is_busy)
 }
 
 void gc9a01_set_window(gc9a01_t *display, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
@@ -181,10 +182,15 @@ void gc9a01_write_scanline_dma(gc9a01_t *display, const badge_color_t *pixels,
                               uint16_t x_offset, uint16_t y, uint16_t width) {
     if (!display->initialized || width == 0) return;
     
-    // Set window for this scanline
+    // CRITICAL: Wait for any previous DMA transfer to complete FIRST
+    // This ensures CS pin state is correct and SPI bus is available
+    gc9a01_dma_wait(display);
+    
+    // Now safe to set window with blocking SPI commands
     gc9a01_set_window(display, x_offset, y, x_offset + width - 1, y);
     
-    // Write pixel data using DMA
+    // Start DMA transfer of pixel data (non-blocking)
+    // This will run in background while CPU renders next scanline
     gc9a01_write_data_dma(display, (const uint8_t*)pixels, width * 2);
 }
 
@@ -193,7 +199,7 @@ bool gc9a01_dma_is_busy(gc9a01_t *display) {
     
     bool busy = dma_channel_is_busy(display->config.dma_channel);
     if (!busy && display->dma_busy) {
-        // DMA transfer completed, clean up
+        // DMA transfer completed, clean up CS pin state
         gpio_put(display->config.pin_cs, 1);
         display->dma_busy = false;
     }

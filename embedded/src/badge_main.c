@@ -33,8 +33,10 @@ bool badge_init(badge_context_t *ctx) {
     // Initialize application state
     ctx->frame_count = 0;
     ctx->running = true;
+    ctx->use_buffer_a = true; // Start with buffer A
     
     printf("Badge initialized successfully\n");
+    printf("Double buffered DMA rendering enabled\n");
     return true;
 }
 
@@ -62,25 +64,34 @@ void badge_shutdown(badge_context_t *ctx) {
     printf("Shutting down badge\n");
     ctx->running = false;
     
+    // Wait for any pending DMA transfer to complete
+    gc9a01_dma_wait(&ctx->display);
+    
     // Turn off display
     gc9a01_display_on(&ctx->display, false);
     gc9a01_sleep(&ctx->display, true);
 }
 
 void badge_render_frame(badge_context_t *ctx) {
-    // Racing-the-beam rendering: generate each scanline on demand and write to display
+    // Racing-the-beam rendering with double buffered DMA
     for (uint16_t y = 0; y < BADGE_DISPLAY_HEIGHT; y++) {
+        // Select current buffer (ping-pong)
+        badge_color_t *current_buffer = ctx->use_buffer_a ? 
+            ctx->scanline_buffer_a : ctx->scanline_buffer_b;
+        
         // Generate scanline pixels using racing-the-beam renderer
-        badge_render_scanline(&ctx->renderer, ctx->scanline_buffer, 0, y, BADGE_DISPLAY_WIDTH);
+        badge_render_scanline(&ctx->renderer, current_buffer, 0, y, BADGE_DISPLAY_WIDTH);
         
-        // Write scanline to display using DMA for efficiency
-        gc9a01_write_scanline_dma(&ctx->display, ctx->scanline_buffer, 0, y, BADGE_DISPLAY_WIDTH);
+        // Write scanline to display using DMA with proper synchronization
+        // This will wait for previous DMA, set window, then start new DMA
+        gc9a01_write_scanline_dma(&ctx->display, current_buffer, 0, y, BADGE_DISPLAY_WIDTH);
         
-        // For very fast updates, we might want to wait for DMA completion
-        // but for a test pattern at 30 FPS, the next scanline setup time
-        // should be enough for DMA to complete
+        // Switch to other buffer for next scanline while DMA writes current one
+        ctx->use_buffer_a = !ctx->use_buffer_a;
+        
+        // CPU can now render next scanline while DMA transfers current one
     }
     
-    // Wait for final DMA transfer to complete
+    // Wait for final DMA transfer to complete before starting next frame
     gc9a01_dma_wait(&ctx->display);
 } 

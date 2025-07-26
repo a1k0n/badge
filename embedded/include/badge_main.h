@@ -8,7 +8,12 @@
 typedef struct {
     gc9a01_t display;
     badge_renderer_t renderer;
-    badge_color_t scanline_buffer[BADGE_DISPLAY_WIDTH]; // Racing-the-beam scanline buffer
+    
+    // Double buffering for DMA interleaving
+    badge_color_t scanline_buffer_a[BADGE_DISPLAY_WIDTH];
+    badge_color_t scanline_buffer_b[BADGE_DISPLAY_WIDTH];
+    bool use_buffer_a; // ping-pong between buffers
+    
     uint32_t frame_count;
     bool running;
 } badge_context_t;
