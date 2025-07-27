@@ -51,4 +51,35 @@ target_compile_definitions(${TARGET_NAME} PRIVATE
     
     # DMA configuration
     GC9A01_USE_DMA=1
-) 
+)
+
+# Add flash target - copies UF2 to mounted RP2350 in bootsel mode
+add_custom_target(flash
+    COMMAND sh -c "if [ -d /Volumes/RP2350 ]; then cp ${TARGET_NAME}.uf2 /Volumes/RP2350/ && echo 'Flashed ${TARGET_NAME}.uf2 to RP2350'; else echo 'ERROR: RP2350 not found in bootsel mode. Connect device and hold BOOTSEL button while plugging in.'; exit 1; fi"
+    DEPENDS ${TARGET_NAME}
+    COMMENT "Flashing ${TARGET_NAME}.uf2 to RP2350 (requires bootsel mode)"
+    VERBATIM
+)
+
+# Add flash-auto target that waits for bootsel mode device
+add_custom_target(flash-auto
+    COMMAND sh -c "echo 'Waiting for RP2350 in bootsel mode...'; while [ ! -d /Volumes/RP2350 ]; do sleep 1; done; cp ${TARGET_NAME}.uf2 /Volumes/RP2350/ && echo 'Flashed ${TARGET_NAME}.uf2 to RP2350'"
+    DEPENDS ${TARGET_NAME}
+    COMMENT "Waiting for RP2350 bootsel mode and flashing ${TARGET_NAME}.uf2"
+    VERBATIM
+)
+
+# Add info target to show UF2 file information  
+add_custom_target(info
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../_deps/picotool-build/picotool info ${TARGET_NAME}.uf2
+    DEPENDS ${TARGET_NAME}
+    COMMENT "Showing information about ${TARGET_NAME}.uf2"
+    VERBATIM
+)
+
+# Add device-info target to show any connected device information
+add_custom_target(device-info
+    COMMAND sh -c "if [ -d /Volumes/RP2350 ]; then echo 'RP2350 found in bootsel mode at /Volumes/RP2350'; else echo 'No RP2350 found in bootsel mode'; fi"
+    COMMENT "Checking for connected RP2350 device"
+    VERBATIM
+)
