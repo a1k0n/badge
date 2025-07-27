@@ -28,7 +28,7 @@ bool badge_init(badge_context_t *ctx) {
     }
     
     // Initialize renderer (no framebuffer needed for embedded)
-    badge_renderer_init(&ctx->renderer, NULL);
+    badge_renderer_init(&ctx->renderer);
     
     // Initialize application state
     ctx->frame_count = 0;

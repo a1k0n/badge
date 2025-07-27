@@ -162,8 +162,10 @@ void desktop_update_display(desktop_context_t *ctx) {
     
     for (int y = 0; y < BADGE_DISPLAY_HEIGHT; y++) {
         memset(scanline_buffer, 0, BADGE_DISPLAY_WIDTH * sizeof(badge_color_t));
-        uint16_t x_offset = BADGE_MASK_X_OFFSET(y);
-        uint16_t width = BADGE_MASK_X_WIDTH(y);
+        //uint16_t x_offset = BADGE_MASK_X_OFFSET(y);
+        //uint16_t width = BADGE_MASK_X_WIDTH(y);
+        uint16_t x_offset = 0;
+        uint16_t width = BADGE_DISPLAY_WIDTH;
         badge_render_scanline(&ctx->renderer, scanline_buffer, x_offset, y, width);
         
         memset(texture_pixels + y * (pitch / 4), 0, BADGE_DISPLAY_WIDTH * sizeof(uint32_t));
