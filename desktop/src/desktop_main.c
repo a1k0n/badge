@@ -53,19 +53,14 @@ bool desktop_init(desktop_context_t *ctx) {
         return false;
     }
     
-    // Initialize badge renderer with framebuffer
-    badge_renderer_init(&ctx->renderer, ctx->framebuffer);
+    // Initialize badge renderer
+    badge_renderer_init(&ctx->renderer);
     
     // Initialize application state
     ctx->frame_count = 0;
     ctx->running = true;
     ctx->last_frame_time = SDL_GetTicks();
     ctx->target_frame_time = 33; // ~30 FPS
-    
-    // Clear framebuffer to black
-    for (int i = 0; i < BADGE_DISPLAY_WIDTH * BADGE_DISPLAY_HEIGHT; i++) {
-        ctx->framebuffer[i] = BADGE_COLOR_BLACK;
-    }
     
     printf("Desktop emulator initialized successfully\n");
     printf("Window size: %dx%d (scale factor: %d)\n", 
@@ -88,9 +83,6 @@ void desktop_run(desktop_context_t *ctx) {
         
         // Advance frame for animations
         badge_advance_frame(&ctx->renderer);
-        
-        // Render frame
-        desktop_render_frame(ctx);
         
         // Update display
         desktop_update_display(ctx);
@@ -153,16 +145,6 @@ void desktop_handle_events(desktop_context_t *ctx) {
     }
 }
 
-void desktop_render_frame(desktop_context_t *ctx) {
-    // Racing-the-beam rendering: generate each scanline on demand
-    for (uint16_t y = 0; y < BADGE_DISPLAY_HEIGHT; y++) {
-        // Render full width scanline directly into scanline buffer
-        badge_render_scanline(&ctx->renderer, ctx->scanline_buffer, 0, y, BADGE_DISPLAY_WIDTH);
-        
-        // The renderer automatically updates our framebuffer since we passed it during init
-    }
-}
-
 void desktop_update_display(desktop_context_t *ctx) {
     void *pixels;
     int pitch;
@@ -175,12 +157,20 @@ void desktop_update_display(desktop_context_t *ctx) {
     
     // Convert RGB565 framebuffer to RGB888 texture
     uint32_t *texture_pixels = (uint32_t*)pixels;
+
+    badge_color_t scanline_buffer[BADGE_DISPLAY_WIDTH];
     
     for (int y = 0; y < BADGE_DISPLAY_HEIGHT; y++) {
-        for (int x = 0; x < BADGE_DISPLAY_WIDTH; x++) {
-            badge_color_t rgb565 = ctx->framebuffer[y * BADGE_DISPLAY_WIDTH + x];
+        memset(scanline_buffer, 0, BADGE_DISPLAY_WIDTH * sizeof(badge_color_t));
+        uint16_t x_offset = BADGE_MASK_X_OFFSET(y);
+        uint16_t width = BADGE_MASK_X_WIDTH(y);
+        badge_render_scanline(&ctx->renderer, scanline_buffer, x_offset, y, width);
+        
+        memset(texture_pixels + y * (pitch / 4), 0, BADGE_DISPLAY_WIDTH * sizeof(uint32_t));
+        for (int x = 0; x < width; x++) {
+            badge_color_t rgb565 = scanline_buffer[x];
             uint32_t rgb888 = desktop_rgb565_to_rgb888(rgb565);
-            texture_pixels[y * (pitch / 4) + x] = rgb888;
+            texture_pixels[y * (pitch / 4) + x + x_offset] = rgb888;
         }
     }
     

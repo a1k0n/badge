@@ -19,28 +19,18 @@ typedef uint16_t badge_color_t;
 #define BADGE_COLOR_GREEN   0x07E0
 #define BADGE_COLOR_BLUE    0x001F
 
+extern const uint8_t mask_x_offset[240];
+#define BADGE_MASK_X_OFFSET(y) mask_x_offset[y]
+#define BADGE_MASK_X_WIDTH(y) 240 - (mask_x_offset[y]<<1)
+
 // Racing-the-beam renderer context with animation state
 typedef struct {
-    // Current frame buffer (if needed for desktop)
-    badge_color_t *framebuffer;
-    
-    // Display dimensions
-    uint16_t display_width;
-    uint16_t display_height;
-    
     // Animation state
     uint32_t frame_count;
-    uint32_t time_ms;
-    
-    // Circular clipping (for future use)
-    uint16_t center_x;
-    uint16_t center_y;
-    uint16_t radius;
-    bool use_circular_clipping;
 } badge_renderer_t;
 
 // Initialize renderer
-void badge_renderer_init(badge_renderer_t *renderer, badge_color_t *framebuffer);
+void badge_renderer_init(badge_renderer_t *renderer);
 
 // Advance frame for animations (call once per frame)
 void badge_advance_frame(badge_renderer_t *renderer);

@@ -16,8 +16,6 @@ typedef struct {
     SDL_Texture *texture;
     
     badge_renderer_t renderer;
-    badge_color_t scanline_buffer[BADGE_DISPLAY_WIDTH]; // Racing-the-beam scanline buffer
-    badge_color_t framebuffer[BADGE_DISPLAY_WIDTH * BADGE_DISPLAY_HEIGHT];
     
     uint32_t frame_count;
     bool running;
