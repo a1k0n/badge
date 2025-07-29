@@ -89,8 +89,9 @@ void rotate2(float x, float y, float s, float c, float *xout, float *yout) {
     *yout = x*s + y*c;
 }
 
-float length2(float x, float y) {
-    return sqrtf(x*x + y*y);
+float length2(float x, float y, float *rxy) {
+  *rxy = atan2f(y, x);
+  return sqrtf(x*x + y*y);
 }
 
 void badge_renderer_init(badge_renderer_t *renderer) {
@@ -177,18 +178,22 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
       float px = rox + t * rdx;
       float py = roy + t * rdy;
       float pz = roz + t * rdz;
-      float lxy = length2(px, py);
+      float rxy = 0, rdz = 0;
+      float lxy = length2(px, py, &rxy);
       float d = lxy - 2.0;
       float ux = 2. * px / lxy;
       float uy = 2. * py / lxy;
-      float ldz = length2(d, pz);
+      float ldz = length2(d, pz, &rdz);
       float d2 = ldz - 1.0;
       t += d2;
       if (d2 < 0.1) {
         float Nx = px - ux;
         float Ny = py - uy;
         float Nz = pz;
-        float l = 0.6*(0.5 + Nx * Lx + Ny * Ly + Nz * Lz);
+        int lxyi = (int)(rxy * 256.0 / M_PI);
+        int ldzi = (int)(rdz * 256.0 / M_PI);
+        float check_xy = (lxyi ^ ldzi) & 0x20 ? 0.2 : 0.0;
+        float l = 0.6*(0.5 + Nx * Lx + Ny * Ly + Nz * Lz + check_xy);
         if (l > 0) {
           if (l > 1) l = 1;
           color = palette[(int)(l * (NPALETTE - 1))];
