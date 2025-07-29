@@ -111,8 +111,8 @@ void badge_advance_frame(badge_renderer_t *renderer) {
   renderer->sB = sinf(renderer->angleB);
   renderer->cB = cosf(renderer->angleB);
 
-  renderer->angleA += 0.011;
-  renderer->angleB += 0.037;
+  renderer->angleA += 0.037;
+  renderer->angleB += 0.011;
 }
 
 void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
@@ -136,6 +136,10 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
   rotate2(rox, roz, renderer->sB, renderer->cB, &rox, &roz);
   rotate2(Lx, Lz, renderer->sB, renderer->cB, &Lx, &Lz);
 
+  int ooy = 65536 / (y + 50);
+  int xcheck = -width/2 * ooy + (renderer->frame_count << 7);
+  int ycheck = ((ooy + renderer->frame_count) & 0x40) ? 1 : 0;
+
   for (uint16_t i = 0; i < width; i++) {
     float rdx = (x_offset + i - 120) / 120.0;
     float rdy = (y - 120) / 120.0;
@@ -146,7 +150,9 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     // rotate xz by B
     rotate2(rdx, rdz, renderer->sB, renderer->cB, &rdx, &rdz);
 
-    uint16_t color = 0;
+    int xcheck2 = xcheck & 0x4000 ? 1 : 0;
+    // (0, 21, 63) : (42, 42, 42)
+    uint16_t color = (xcheck2 ^ ycheck) ? (21 << 5) | 31 : (21 << 11) | (42 << 5) | 21;
     float t = 0.0;
     for (int j = 0; j < 20; j++) {
       /*
@@ -178,14 +184,16 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
       float ldz = length2(d, pz);
       float d2 = ldz - 1.0;
       t += d2;
-      if (d2 < 0.05) {
+      if (d2 < 0.1) {
         float Nx = px - ux;
         float Ny = py - uy;
         float Nz = pz;
-        float l = 0.9*(0.1 + Nx * Lx + Ny * Ly + Nz * Lz);
+        float l = 0.6*(0.5 + Nx * Lx + Ny * Ly + Nz * Lz);
         if (l > 0) {
           if (l > 1) l = 1;
           color = palette[(int)(l * (NPALETTE - 1))];
+        } else {
+          color = 0x0000;
         }
         break;
       }
@@ -195,5 +203,7 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     }
 
     pixels[i] = color;
+
+    xcheck += ooy;
   }
 }
