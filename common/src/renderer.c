@@ -18,10 +18,80 @@ const uint8_t mask_x_offset[240] = {
     48,  50,  51, 52, 54,  55, 57, 59, 61, 62, 64, 66, 68, 70, 73, 75, 78, 81,
     84,  87,  91, 95, 101, 109};
 
+const uint16_t palette[] = {
+    0x0000,  // (0, 0, 0)
+    0x0000,  // (1, 0, 0)
+    0x0820,  // (2, 1, 0)
+    0x0840,  // (3, 2, 0)
+    0x1060,  // (4, 3, 1)
+    0x1080,  // (5, 4, 1)
+    0x18a0,  // (6, 5, 1)
+    0x18a0,  // (7, 5, 1)
+    0x20c1,  // (8, 6, 2)
+    0x20e1,  // (9, 7, 2)
+    0x2901,  // (11, 8, 2)
+    0x3121,  // (12, 9, 2)
+    0x3141,  // (13, 10, 3)
+    0x3941,  // (14, 10, 3)
+    0x3961,  // (15, 11, 3)
+    0x4181,  // (16, 12, 3)
+    0x41a2,  // (17, 13, 4)
+    0x49c2,  // (18, 14, 4)
+    0x49e2,  // (19, 15, 4)
+    0x5202,  // (21, 16, 5)
+    0x5a02,  // (22, 16, 5)
+    0x5a22,  // (23, 17, 5)
+    0x6242,  // (24, 18, 5)
+    0x6263,  // (25, 19, 6)
+    0x6a83,  // (26, 20, 6)
+    0x6aa3,  // (27, 21, 6)
+    0x72c3,  // (28, 22, 6)
+    0x7ac3,  // (30, 22, 7)
+    0x7ae3,  // (31, 23, 7)
+    0x8303,  // (32, 24, 7)
+    0x8324,  // (33, 25, 8)
+    0x8b44,  // (34, 26, 8)
+    0x8b64,  // (35, 27, 9)
+    0x9384,  // (37, 28, 9)
+    0x9ba4,  // (38, 29, 9)
+    0x9bc5,  // (39, 30, 10)
+    0xa3e5,  // (41, 31, 11)
+    0xac25,  // (42, 33, 11)
+    0xb446,  // (44, 34, 12)
+    0xbc66,  // (46, 35, 13)
+    0xbca7,  // (47, 37, 14)
+    0xc4e7,  // (49, 39, 15)
+    0xcd08,  // (51, 40, 16)
+    0xdd48,  // (54, 42, 17)
+    0xe589,  // (56, 44, 19)
+    0xedea,  // (59, 47, 21)
+    0xfe4b,  // (62, 50, 23)
+    0xfeac,  // (63, 53, 25)
+    0xff0e,  // (63, 56, 28)
+    0xff8f,  // (63, 60, 31)
+    0xfff1,  // (63, 63, 35)
+    0xfff3,  // (63, 63, 39)
+    0xfff5,  // (63, 63, 43)
+    0xfff8,  // (63, 63, 49)
+    0xfffb,  // (63, 63, 55)
+    0xfffe,  // (63, 63, 61)
+    0xffff,  // (63, 63, 63)
+};
+const int NPALETTE = sizeof(palette) / sizeof(palette[0]);
+
 // torus radii and distance from camera
 // these are pretty baked-in to other constants now, so it probably won't work
 // if you change them too much.
 const int dz = 5, r1 = 1, r2 = 2;
+
+void rotate2(float x, float y, float s, float c, float *xout, float *yout) {
+    *xout = x*c - y*s;
+    *yout = x*s + y*c;
+}
+
+float length2(float x, float y) {
+    return sqrtf(x*x + y*y);
+}
 
 void badge_renderer_init(badge_renderer_t *renderer) {
     renderer->frame_count = 0;
@@ -32,152 +102,98 @@ void badge_renderer_init(badge_renderer_t *renderer) {
 
 // always call this before rendering a frame
 void badge_advance_frame(badge_renderer_t *renderer) {
-    renderer->frame_count++;
+  renderer->frame_count++;
 
-    // we're using a Cortex M33 which has an FPU, but only once per frame here
-    // might replace with sine table so we get clean wrapping around 2pi
-    float sA = sinf(renderer->angleA);
-    float cA = cosf(renderer->angleA);
-    float sB = sinf(renderer->angleB);
-    float cB = cosf(renderer->angleB);
+  // we're using a Cortex M33 which has an FPU, but only once per frame here
+  // might replace with sine table so we get clean wrapping around 2pi
+  renderer->sA = sinf(renderer->angleA);
+  renderer->cA = cosf(renderer->angleA);
+  renderer->sB = sinf(renderer->angleB);
+  renderer->cB = cosf(renderer->angleB);
 
-    renderer->sA = (int16_t) (16383.0 * sA);
-    renderer->cA = (int16_t) (16383.0 * cA);
-
-    renderer->sB = (int16_t) (16383.0 * sB);
-    renderer->cB = (int16_t) (16383.0 * cB);
-
-    renderer->sAsB = (int16_t) (16383.0 * (sA * sB));
-    renderer->cAsB = (int16_t) (16383.0 * (cA * sB));
-    renderer->sAcB = (int16_t) (16383.0 * (cA * cB));
-    renderer->cAcB = (int16_t) (16383.0 * (cA * cB));
-
-    //renderer->angleA += 0.07f;
-    //renderer->angleB += 0.03f;
-
-    renderer->p0x = (int32_t) (dz * renderer->sB >> 6);
-    renderer->p0y = (int32_t) (dz * renderer->sAcB >> 6);
-    renderer->p0z = (int32_t) (-dz * renderer->cAcB >> 6);
-
-    // int16_t yincC = (cA >> 6) + (cA >> 5);      // 12*cA >> 8;
-    // int16_t yincS = (sA >> 6) + (sA >> 5);      // 12*sA >> 8;
-    // int16_t xincX = (cB >> 7) + (cB >> 6);      // 6*cB >> 8;
-    // int16_t xincY = (sAsB >> 7) + (sAsB >> 6);  // 6*sAsB >> 8;
-    // int16_t xincZ = (cAsB >> 7) + (cAsB >> 6);  // 6*cAsB >> 8;
-    // int16_t ycA = -((cA >> 1) + (cA >> 4));     // -12 * yinc1 = -9*cA >> 4;
-    // int16_t ysA = -((sA >> 1) + (sA >> 4));     // -12 * yinc2 = -9*sA >> 4;
-
-    const int scale_factor = 2;
-
-    renderer->yincC = scale_factor*renderer->cA >> 8;
-    renderer->yincS = scale_factor*renderer->sA >> 8;
-
-    renderer->xincX = scale_factor*renderer->cB >> 8;
-    renderer->xincY = scale_factor*renderer->sAsB >> 8;
-    renderer->xincZ = scale_factor*renderer->cAsB >> 8;
-
-    renderer->ycA = -(BADGE_DISPLAY_WIDTH/2)*renderer->yincC;
-    renderer->ysA = -(BADGE_DISPLAY_WIDTH/2)*renderer->yincS;
-}
-
-static int length_cordic(int16_t x, int16_t y, int16_t *x2_, int16_t y2) {
-  int x2 = *x2_;
-  if (x < 0) {  // start in right half-plane
-    x = -x;
-    x2 = -x2;
-  }
-  for (int i = 0; i < 8; i++) {
-    int t = x;
-    int t2 = x2;
-    if (y < 0) {
-      x -= y >> i;
-      y += t >> i;
-      x2 -= y2 >> i;
-      y2 += t2 >> i;
-    } else {
-      x += y >> i;
-      y -= t >> i;
-      x2 += y2 >> i;
-      y2 -= t2 >> i;
-    }
-  }
-  // divide by 0.625 as a cheap approximation to the 0.607 scaling factor factor
-  // introduced by this algorithm (see https://en.wikipedia.org/wiki/CORDIC)
-  *x2_ = (x2 >> 1) + (x2 >> 3);
-  return (x >> 1) + (x >> 3);
+  renderer->angleA += 0.011;
+  renderer->angleB += 0.037;
 }
 
 void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
-                          uint16_t x_offset, uint16_t y, uint16_t width) {
-    // Bounds checking
-    if (y >= BADGE_DISPLAY_HEIGHT) return;
-    if (x_offset >= BADGE_DISPLAY_WIDTH) return;
-    
-    // Clamp width to display bounds
-    if (x_offset + width > BADGE_DISPLAY_WIDTH) {
-        width = BADGE_DISPLAY_WIDTH - x_offset;
-    }
-    
-    // Generate animated test pattern scanline
-    // Add vertical scroll animation using frame counter
-    uint16_t animated_y = (y + renderer->frame_count) % (BADGE_DISPLAY_HEIGHT * 2);
+                           uint16_t x_offset, uint16_t y, uint16_t width) {
+  // Bounds checking
+  if (y >= BADGE_DISPLAY_HEIGHT) return;
+  if (x_offset >= BADGE_DISPLAY_WIDTH) return;
 
-    int xsAsB = -width * renderer->xincY >> 1;
-    int xcAsB = -width * renderer->xincZ >> 1;
+  // Clamp width to display bounds
+  if (x_offset + width > BADGE_DISPLAY_WIDTH) {
+    width = BADGE_DISPLAY_WIDTH - x_offset;
+  }
 
-    int16_t vxi14 = (-width * renderer->xincX >> 1) - renderer->sB;
-    int16_t vyi14 = renderer->ycA - xsAsB - renderer->sAcB;
-    int16_t vzi14 = renderer->ysA + xcAsB + renderer->cAcB;
+  float rox = 0, roy = 0, roz = -4.5;
+  float Lx = 0.5, Ly = 0.5, Lz = -1.0;
 
-    const int r1i = 256*r1;
-    const int r2i = 256*r2;
+  // rotate yz by A
+  rotate2(roy, roz, renderer->sA, renderer->cA, &roy, &roz);
+  rotate2(Ly, Lz, renderer->sA, renderer->cA, &Ly, &Lz);
+  // rotate xz by B
+  rotate2(rox, roz, renderer->sB, renderer->cB, &rox, &roz);
+  rotate2(Lx, Lz, renderer->sB, renderer->cB, &Lx, &Lz);
 
-    for (uint16_t i = 0; i < width; i++) {
-        int t = 512;
-        uint16_t x = x_offset + i;
+  for (uint16_t i = 0; i < width; i++) {
+    float rdx = (x_offset + i - 120) / 120.0;
+    float rdy = (y - 120) / 120.0;
+    float rdz = 1.0;
 
-        int16_t px = renderer->p0x + (vxi14 >> 5); // assuming t = 512, t*vxi>>8 == vxi<<1
-        int16_t py = renderer->p0y + (vyi14 >> 5);
-        int16_t pz = renderer->p0z + (vzi14 >> 5);
+    // rotate yz by A
+    rotate2(rdy, rdz, renderer->sA, renderer->cA, &rdy, &rdz);
+    // rotate xz by B
+    rotate2(rdx, rdz, renderer->sB, renderer->cB, &rdx, &rdz);
 
-        int16_t lx0 = renderer->sB >> 2;
-        int16_t ly0 = renderer->sAcB - renderer->cA >> 2;
-        int16_t lz0 = -renderer->cAcB - renderer->sA >> 2;
-
-        uint8_t r = 0, g = 0, b = 0;
-        for (;;) {
-            int t0, t1, t2, d;
-            int16_t lx = lx0, ly = ly0, lz = lz0;
-            t0 = length_cordic(px, py, &lx, ly);
-            t1 = t0 - r2i;
-            t2 = length_cordic(pz, t1, &lz, lx);
-            d = t2 - r1i;
-            t += d;
-            if (t > 8*256) {
+    uint16_t color = 0;
+    float t = 0.0;
+    for (int j = 0; j < 20; j++) {
+      /*
+            vec3 pos = ro + t * rd;
+            float lxy = length(pos.xy);
+            float d = lxy - 2.0;
+            vec2 uxy = 2.*pos.xy / lxy;
+            float ldz = length(vec2(d, pos.z));
+            float d2 = ldz - 1.0;
+            t += d2;
+            if (d2 < 0.05) {
+                vec3 N = pos - vec3(uxy, 0.0);
+                float l = 0.7*(dot(N, L));
+                color = 0.2*color + 0.8*vec3(l, l, l);
                 break;
-            } else if (d < 2) {
-              //int N = lz >> 9;
-              //putchar(".,-~:;!*=#$@"[N > 0 ? N < 12 ? N : 11 : 0]);
-              if (lz > 0) {
-                g = lz >> 7;
-                r = lz >> 8;
-              }
-              break;
             }
-
-            px += d*vxi14 >> 14;
-            py += d*vyi14 >> 14;
-            pz += d*vzi14 >> 14;
-
+            if (t > 15.0) {
+                // color.y += float(i-1)*.025;
+                break;
+            }
+      */
+      float px = rox + t * rdx;
+      float py = roy + t * rdy;
+      float pz = roz + t * rdz;
+      float lxy = length2(px, py);
+      float d = lxy - 2.0;
+      float ux = 2. * px / lxy;
+      float uy = 2. * py / lxy;
+      float ldz = length2(d, pz);
+      float d2 = ldz - 1.0;
+      t += d2;
+      if (d2 < 0.05) {
+        float Nx = px - ux;
+        float Ny = py - uy;
+        float Nz = pz;
+        float l = 0.9*(0.1 + Nx * Lx + Ny * Ly + Nz * Lz);
+        if (l > 0) {
+          if (l > 1) l = 1;
+          color = palette[(int)(l * (NPALETTE - 1))];
         }
-
-        vxi14 += renderer->xincX;
-        vyi14 -= renderer->xincY;
-        vzi14 += renderer->xincZ;
-
-        pixels[i] = BADGE_RGB565(r, g, b);
+        break;
+      }
+      if (t > 15.0) {
+        break;
+      }
     }
 
-    renderer->ycA += renderer->yincC;
-    renderer->ysA += renderer->yincS;
+    pixels[i] = color;
+  }
 }

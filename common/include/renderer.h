@@ -29,15 +29,8 @@ typedef struct {
     uint32_t frame_count;
 
     // rotation matrix parameters
-    int16_t sA, cA; // sin/cos of A
-    int16_t sB, cB; // sin/cos of B
-    int16_t sAsB, cAsB, sAcB, cAcB; // sin/cos of A and B
-
-    int16_t yincC, yincS;
-    int16_t xincX, xincY, xincZ;
-    int16_t ycA, ysA;
-
-    int32_t p0x, p0y, p0z; // starting point
+    float sA, cA; // sin/cos of A
+    float sB, cB; // sin/cos of B
 
     float angleA, angleB;
 } badge_renderer_t;
