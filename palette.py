@@ -28,16 +28,16 @@ def generate_gradient(base_color, num_colors=64, specular_power=30):
 # Generate the gradient
 maxshade = 58
 base_color = (63, 48, 15)
+#base_color = (63, 0, 0)
 gradient = generate_gradient(base_color, num_colors=maxshade, specular_power=8)
 
 # Print the gradient
-for i, color in enumerate(gradient):
-    #print(f"Color {i}: RGB{tuple(color)}")
-    r5 = color[0] >> 1
-    g6 = color[1]
-    b5 = color[2] >> 1
-    rgb565 = (r5 << 11) | (g6 << 5) | b5
-    print(f"0x{rgb565:04x}, // {tuple(color)}")
+print(', '.join([hex(color[0] >> 1) for color in gradient]))
+print(', '.join([hex(color[1] >> 0) for color in gradient]))
+print(', '.join([hex(color[2] >> 1) for color in gradient]))
+
+    #rgb565 = (r5 << 11) | (g6 << 5) | b5
+    #print(f"0x{rgb565:04x}, ")
     #rhex.write(hex(color[0])[2:] + "\n")
     #ghex.write(hex(color[1])[2:] + "\n")
     #bhex.write(hex(color[2])[2:] + "\n")

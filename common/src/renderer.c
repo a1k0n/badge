@@ -18,66 +18,47 @@ const uint8_t mask_x_offset[240] = {
     48,  50,  51, 52, 54,  55, 57, 59, 61, 62, 64, 66, 68, 70, 73, 75, 78, 81,
     84,  87,  91, 95, 101, 109};
 
-const uint16_t palette[] = {
-    0x0000,  // (0, 0, 0)
-    0x0000,  // (1, 0, 0)
-    0x0820,  // (2, 1, 0)
-    0x0840,  // (3, 2, 0)
-    0x1060,  // (4, 3, 1)
-    0x1080,  // (5, 4, 1)
-    0x18a0,  // (6, 5, 1)
-    0x18a0,  // (7, 5, 1)
-    0x20c1,  // (8, 6, 2)
-    0x20e1,  // (9, 7, 2)
-    0x2901,  // (11, 8, 2)
-    0x3121,  // (12, 9, 2)
-    0x3141,  // (13, 10, 3)
-    0x3941,  // (14, 10, 3)
-    0x3961,  // (15, 11, 3)
-    0x4181,  // (16, 12, 3)
-    0x41a2,  // (17, 13, 4)
-    0x49c2,  // (18, 14, 4)
-    0x49e2,  // (19, 15, 4)
-    0x5202,  // (21, 16, 5)
-    0x5a02,  // (22, 16, 5)
-    0x5a22,  // (23, 17, 5)
-    0x6242,  // (24, 18, 5)
-    0x6263,  // (25, 19, 6)
-    0x6a83,  // (26, 20, 6)
-    0x6aa3,  // (27, 21, 6)
-    0x72c3,  // (28, 22, 6)
-    0x7ac3,  // (30, 22, 7)
-    0x7ae3,  // (31, 23, 7)
-    0x8303,  // (32, 24, 7)
-    0x8324,  // (33, 25, 8)
-    0x8b44,  // (34, 26, 8)
-    0x8b64,  // (35, 27, 9)
-    0x9384,  // (37, 28, 9)
-    0x9ba4,  // (38, 29, 9)
-    0x9bc5,  // (39, 30, 10)
-    0xa3e5,  // (41, 31, 11)
-    0xac25,  // (42, 33, 11)
-    0xb446,  // (44, 34, 12)
-    0xbc66,  // (46, 35, 13)
-    0xbca7,  // (47, 37, 14)
-    0xc4e7,  // (49, 39, 15)
-    0xcd08,  // (51, 40, 16)
-    0xdd48,  // (54, 42, 17)
-    0xe589,  // (56, 44, 19)
-    0xedea,  // (59, 47, 21)
-    0xfe4b,  // (62, 50, 23)
-    0xfeac,  // (63, 53, 25)
-    0xff0e,  // (63, 56, 28)
-    0xff8f,  // (63, 60, 31)
-    0xfff1,  // (63, 63, 35)
-    0xfff3,  // (63, 63, 39)
-    0xfff5,  // (63, 63, 43)
-    0xfff8,  // (63, 63, 49)
-    0xfffb,  // (63, 63, 55)
-    0xfffe,  // (63, 63, 61)
-    0xffff,  // (63, 63, 63)
-};
-const int NPALETTE = sizeof(palette) / sizeof(palette[0]);
+const uint16_t palette1_r[] = {
+    0x0,  0x0,  0x1,  0x1,  0x2,  0x2,  0x3,  0x3,  0x4,  0x4,  0x5,  0x6,
+    0x6,  0x7,  0x7,  0x8,  0x8,  0x9,  0x9,  0xa,  0xb,  0xb,  0xc,  0xc,
+    0xd,  0xd,  0xe,  0xf,  0xf,  0x10, 0x10, 0x11, 0x11, 0x12, 0x13, 0x13,
+    0x14, 0x15, 0x16, 0x17, 0x17, 0x18, 0x19, 0x1b, 0x1c, 0x1d, 0x1f, 0x1f,
+    0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f};
+
+const uint16_t palette1_g[] = {
+    0x0,  0x0,  0x1,  0x2,  0x3,  0x4,  0x5,  0x5,  0x6,  0x7,  0x8,  0x9,
+    0xa,  0xa,  0xb,  0xc,  0xd,  0xe,  0xf,  0x10, 0x10, 0x11, 0x12, 0x13,
+    0x14, 0x15, 0x16, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e,
+    0x1f, 0x21, 0x22, 0x23, 0x25, 0x27, 0x28, 0x2a, 0x2c, 0x2f, 0x32, 0x35,
+    0x38, 0x3c, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f};
+
+const uint16_t palette1_b[] = {
+    0x0, 0x0, 0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x1,  0x1, 0x1, 0x1,
+    0x1, 0x1, 0x1,  0x1,  0x2,  0x2,  0x2,  0x2,  0x2,  0x2, 0x2, 0x3,
+    0x3, 0x3, 0x3,  0x3,  0x3,  0x3,  0x4,  0x4,  0x4,  0x4, 0x4, 0x5,
+    0x5, 0x5, 0x6,  0x6,  0x7,  0x7,  0x8,  0x8,  0x9,  0xa, 0xb, 0xc,
+    0xe, 0xf, 0x11, 0x13, 0x15, 0x18, 0x1b, 0x1e, 0x1f, 0x1f};
+
+const uint16_t palette2_r[] = {
+    0x0,  0x0,  0x1,  0x1,  0x2,  0x2,  0x3,  0x3,  0x4,  0x4,  0x5,  0x6,
+    0x6,  0x7,  0x7,  0x8,  0x8,  0x9,  0x9,  0xa,  0xb,  0xb,  0xc,  0xc,
+    0xd,  0xd,  0xe,  0xf,  0xf,  0x10, 0x10, 0x11, 0x11, 0x12, 0x13, 0x13,
+    0x14, 0x15, 0x16, 0x17, 0x17, 0x18, 0x19, 0x1b, 0x1c, 0x1d, 0x1f, 0x1f,
+    0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f};
+const uint16_t palette2_g[] = {
+    0x0, 0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0, 0x0, 0x0,
+    0x0, 0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0, 0x0, 0x0,
+    0x0, 0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0, 0x1, 0x1,
+    0x1, 0x1,  0x2,  0x3,  0x3,  0x4,  0x5,  0x6,  0x7,  0x9, 0xb, 0xd,
+    0xf, 0x12, 0x16, 0x19, 0x1e, 0x23, 0x28, 0x2f, 0x36, 0x3f};
+const uint16_t palette2_b[] = {
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0,  0x0,  0x0,  0x0,  0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0,  0x0,  0x0,  0x0,  0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0,  0x0,  0x0,  0x0,  0x0, 0x0, 0x0,
+    0x0, 0x0, 0x1, 0x1, 0x1, 0x2,  0x2,  0x3,  0x3,  0x4, 0x5, 0x6,
+    0x7, 0x9, 0xb, 0xc, 0xf, 0x11, 0x14, 0x17, 0x1b, 0x1f};
+
+const int NPALETTE = sizeof(palette1_r) / sizeof(palette1_r[0]);
 
 void rotate2(float x, float y, float s, float c, float *xout, float *yout) {
     *xout = x*c - y*s;
@@ -126,6 +107,12 @@ float fast_atan2f(float y, float x) {
   return r;
 }
 
+// step from a to b smoothly as t goes from 0 to 1
+float smoothstep(float a, float b, float t) {
+  t = t * t * (3 - 2 * t);
+  return t * (b - a) + a;
+}
+
 void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
                            uint16_t x_offset, uint16_t y, uint16_t width) {
   // Bounds checking
@@ -141,8 +128,14 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
   float rox = 0, roy = 0, roz = -drawdist;
   float Lx = 0.5, Ly = 0.5, Lz = -1.0;
 
+  int bg10_r = 21, bg10_g = 42, bg10_b = 21;
+  int bg11_r = 0, bg11_g = 21, bg11_b = 31;
+  int bg20_r = 21, bg20_g = 42, bg20_b = 21;
+  int bg21_r = 21, bg21_g = 0, bg21_b = 21;
+
   float r1 = 2.0, r2 = 1;
   int fc = renderer->frame_count & 511;
+  int palette = 0;
   // start with r=(2,1), then after ~4 seconds @ 50Hz (192 frames), interpolate
   // so that we get to r=(0,2.5) on frame 256, then interpolate so that we
   // return to (2,1) during the last 64 frames of the 512 frame cycle
@@ -151,16 +144,28 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     r2 = 1;
   } else if (fc < 256) {
     float t = (fc - 192) / 64.0f;
-    r1 = (1.0f - t) * 2.0f + t * 0.0f;
-    r2 = (1.0f - t) * 1.0f + t * 2.5f;
+    r1 = smoothstep(2.0f, 0.0f, t);
+    r2 = smoothstep(1.0f, 2.5f, t);
+    palette = smoothstep(0, 256, t);
   } else if (fc < 448) {
     r1 = 0.0f;
     r2 = 2.5f;
+    palette = 256;
   } else {
     float t = (fc - 448) / 64.0f;
-    r1 = (1.0f - t) * 0.0f + t * 2.0f;
-    r2 = (1.0f - t) * 2.5f + t * 1.0f;
+    r1 = smoothstep(0.0f, 2.0f, t);
+    r2 = smoothstep(2.5f, 1.0f, t);
+    palette = smoothstep(256, 0, t);
   }
+
+  int bg0_r = (bg10_r * (256-palette) + bg20_r * palette) >> 8;
+  int bg0_g = (bg10_g * (256-palette) + bg20_g * palette) >> 8;
+  int bg0_b = (bg10_b * (256-palette) + bg20_b * palette) >> 8;
+  int bg1_r = (bg11_r * (256-palette) + bg21_r * palette) >> 8;
+  int bg1_g = (bg11_g * (256-palette) + bg21_g * palette) >> 8;
+  int bg1_b = (bg11_b * (256-palette) + bg21_b * palette) >> 8;
+  uint16_t bg0 = (bg0_r << 11) | (bg0_g << 5) | bg0_b;
+  uint16_t bg1 = (bg1_r << 11) | (bg1_g << 5) | bg1_b;
 
   // rotate yz by A
   rotate2(roy, roz, renderer->sA, renderer->cA, &roy, &roz);
@@ -185,7 +190,7 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
 
     int xcheck2 = xcheck & 0x4000 ? 1 : 0;
     // (0, 21, 63) : (42, 42, 42)
-    uint16_t color = (xcheck2 ^ ycheck) ? (21 << 5) | 31 : (21 << 11) | (42 << 5) | 21;
+    uint16_t color = (xcheck2 ^ ycheck) ? bg0 : bg1;
     float t = drawdist - r2 - r1*1.5;
     float px = rdx*t + rox;
     float py = rdy*t + roy;
@@ -235,11 +240,15 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
         float rxz = fast_atan2f(pz, d1);
         int lxyi = (int)(rxy * 256.0 / M_PI);
         int lxzi = (int)(rxz * 256.0 / M_PI);
-        float check_xy = (lxyi ^ lxzi) & 0x20 ? 1.0 : 0.0;
+        float check_xy = (lxyi ^ lxzi) & 0x20 ? 1.0 + palette/256.0 : 0.0;
         float l = Nmag*0.6*(0.2 + Nx * Lx + Ny * Ly + Nz * Lz + check_xy);
         if (l > 0) {
           if (l > 1) l = 1;
-          color = palette[(int)(l * (NPALETTE - 1))];
+          int k = (int)(l * (NPALETTE - 1));
+          int r = (palette1_r[k] * (256-palette) + palette2_r[k] * palette) >> 8;
+          int g = (palette1_g[k] * (256-palette) + palette2_g[k] * palette) >> 8;
+          int b = (palette1_b[k] * (256-palette) + palette2_b[k] * palette) >> 8;
+          color = (r << 11) | (g << 5) | b;
         } else {
           color = 0x0000;
         }
