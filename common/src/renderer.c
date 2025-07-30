@@ -79,11 +79,6 @@ const uint16_t palette[] = {
 };
 const int NPALETTE = sizeof(palette) / sizeof(palette[0]);
 
-// torus radii and distance from camera
-// these are pretty baked-in to other constants now, so it probably won't work
-// if you change them too much.
-const int dz = 5, r1 = 1, r2 = 2;
-
 void rotate2(float x, float y, float s, float c, float *xout, float *yout) {
     *xout = x*c - y*s;
     *yout = x*s + y*c;
@@ -127,7 +122,8 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     width = BADGE_DISPLAY_WIDTH - x_offset;
   }
 
-  float rox = 0, roy = 0, roz = -4.5;
+  float drawdist = 4.5;
+  float rox = 0, roy = 0, roz = -drawdist;
   float Lx = 0.5, Ly = 0.5, Lz = -1.0;
 
   // rotate yz by A
@@ -138,8 +134,8 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
   rotate2(Lx, Lz, renderer->sB, renderer->cB, &Lx, &Lz);
 
   int ooy = 65536 / (y + 50);
-  int xcheck = -width/2 * ooy + (renderer->frame_count << 7);
-  int ycheck = ((ooy + renderer->frame_count) & 0x40) ? 1 : 0;
+  int xcheck = -width/2 * ooy + (renderer->frame_count << 9);
+  int ycheck = ((ooy + (renderer->frame_count<<1)) & 0x40) ? 1 : 0;
 
   for (uint16_t i = 0; i < width; i++) {
     float rdx = (x_offset + i - 120) / 120.0;
@@ -154,46 +150,27 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     int xcheck2 = xcheck & 0x4000 ? 1 : 0;
     // (0, 21, 63) : (42, 42, 42)
     uint16_t color = (xcheck2 ^ ycheck) ? (21 << 5) | 31 : (21 << 11) | (42 << 5) | 21;
-    float t = 0.0;
+    const float r1 = 2.0, r2 = 1;
+    float t = drawdist - r2 - r1*1.5;
     for (int j = 0; j < 20; j++) {
-      /*
-            vec3 pos = ro + t * rd;
-            float lxy = length(pos.xy);
-            float d = lxy - 2.0;
-            vec2 uxy = 2.*pos.xy / lxy;
-            float ldz = length(vec2(d, pos.z));
-            float d2 = ldz - 1.0;
-            t += d2;
-            if (d2 < 0.05) {
-                vec3 N = pos - vec3(uxy, 0.0);
-                float l = 0.7*(dot(N, L));
-                color = 0.2*color + 0.8*vec3(l, l, l);
-                break;
-            }
-            if (t > 15.0) {
-                // color.y += float(i-1)*.025;
-                break;
-            }
-      */
       float px = rox + t * rdx;
       float py = roy + t * rdy;
       float pz = roz + t * rdz;
       float rxy = 0, rdz = 0;
       float lxy = length2(px, py, &rxy);
-      float d = lxy - 2.0;
-      float ux = 2. * px / lxy;
-      float uy = 2. * py / lxy;
+      float d = lxy - r1;
       float ldz = length2(d, pz, &rdz);
-      float d2 = ldz - 1.0;
-      t += d2;
-      if (d2 < 0.1) {
-        float Nx = px - ux;
-        float Ny = py - uy;
+      float dt = ldz - r2;
+      t += dt;
+      if (dt > -0.075 && dt < 0.075) {
+        float Nx = px - r1*px/lxy;
+        float Ny = py - r1*py/lxy;
         float Nz = pz;
+        float Nmag = 1.0/r2;  // 1.0/sqrt(Nx*Nx + Ny*Ny + Nz*Nz);
         int lxyi = (int)(rxy * 256.0 / M_PI);
         int ldzi = (int)(rdz * 256.0 / M_PI);
-        float check_xy = (lxyi ^ ldzi) & 0x20 ? 0.2 : 0.0;
-        float l = 0.6*(0.5 + Nx * Lx + Ny * Ly + Nz * Lz + check_xy);
+        float check_xy = (lxyi ^ ldzi) & 0x20 ? 1.0 : 0.0;
+        float l = Nmag*0.6*(0.2 + Nx * Lx + Ny * Ly + Nz * Lz + check_xy);
         if (l > 0) {
           if (l > 1) l = 1;
           color = palette[(int)(l * (NPALETTE - 1))];
