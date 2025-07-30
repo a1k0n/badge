@@ -84,8 +84,7 @@ void rotate2(float x, float y, float s, float c, float *xout, float *yout) {
     *yout = x*s + y*c;
 }
 
-float length2(float x, float y, float *rxy) {
-  *rxy = atan2f(y, x);
+float length2(float x, float y) {
   return sqrtf(x*x + y*y);
 }
 
@@ -111,6 +110,22 @@ void badge_advance_frame(badge_renderer_t *renderer) {
   renderer->angleB += 0.011;
 }
 
+float fast_atan2f(float y, float x) {
+  // https://math.stackexchange.com/a/1105038
+  // Fast approximation of atan2 with max error ~0.07 radians
+  const float abs_y = fabsf(y);
+  const float abs_x = fabsf(x);
+  const float a = fminf(abs_x, abs_y) / fmaxf(abs_x, abs_y);
+  const float s = a * a;
+  float r = ((-0.0464964749f * s + 0.15931422f) * s - 0.327622764f) * s * a + a;
+
+  if (abs_y > abs_x) r = 1.57079637f - r;
+  if (x < 0) r = 3.14159274f - r;
+  if (y < 0) r = -r;
+  
+  return r;
+}
+
 void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
                            uint16_t x_offset, uint16_t y, uint16_t width) {
   // Bounds checking
@@ -125,6 +140,27 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
   float drawdist = 4.5;
   float rox = 0, roy = 0, roz = -drawdist;
   float Lx = 0.5, Ly = 0.5, Lz = -1.0;
+
+  float r1 = 2.0, r2 = 1;
+  int fc = renderer->frame_count & 511;
+  // start with r=(2,1), then after ~4 seconds @ 50Hz (192 frames), interpolate
+  // so that we get to r=(0,2.5) on frame 256, then interpolate so that we
+  // return to (2,1) during the last 64 frames of the 512 frame cycle
+  if (fc < 192) {
+    r1 = 2.0;
+    r2 = 1;
+  } else if (fc < 256) {
+    float t = (fc - 192) / 64.0f;
+    r1 = (1.0f - t) * 2.0f + t * 0.0f;
+    r2 = (1.0f - t) * 1.0f + t * 2.5f;
+  } else if (fc < 448) {
+    r1 = 0.0f;
+    r2 = 2.5f;
+  } else {
+    float t = (fc - 448) / 64.0f;
+    r1 = (1.0f - t) * 0.0f + t * 2.0f;
+    r2 = (1.0f - t) * 2.5f + t * 1.0f;
+  }
 
   // rotate yz by A
   rotate2(roy, roz, renderer->sA, renderer->cA, &roy, &roz);
@@ -150,7 +186,6 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     int xcheck2 = xcheck & 0x4000 ? 1 : 0;
     // (0, 21, 63) : (42, 42, 42)
     uint16_t color = (xcheck2 ^ ycheck) ? (21 << 5) | 31 : (21 << 11) | (42 << 5) | 21;
-    const float r1 = 2.0, r2 = 1;
     float t = drawdist - r2 - r1*1.5;
     float px = rdx*t + rox;
     float py = rdy*t + roy;
@@ -175,10 +210,9 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
       float dt = ldz - r2;
       t += dt;
       */
-      float rxy = 0, rxz = 0;
-      float lxy = length2(px, py, &rxy);
+      float lxy = length2(px, py);
       float d1 = lxy - r1;
-      float ldz = length2(pz, d1, &rxz);
+      float ldz = length2(pz, d1);
       // [x2*x5*(-r2 + x5)/(rdz*x2*x3 - x4*(rdx*x0 + rdy*x1))])
       float d2 = ldz - r2;
       //float dt = -lxy*ldz*d2/(rdz*lxy*pz + d1*(rdx*px + rdy*py));
@@ -197,6 +231,8 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
         float Ny = py - r1*py/lxy;
         float Nz = pz;
         float Nmag = 1.0/r2;  // 1.0/sqrt(Nx*Nx + Ny*Ny + Nz*Nz);
+        float rxy = fast_atan2f(py, px);
+        float rxz = fast_atan2f(pz, d1);
         int lxyi = (int)(rxy * 256.0 / M_PI);
         int lxzi = (int)(rxz * 256.0 / M_PI);
         float check_xy = (lxyi ^ lxzi) & 0x20 ? 1.0 : 0.0;
