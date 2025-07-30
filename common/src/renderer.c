@@ -152,7 +152,19 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     uint16_t color = (xcheck2 ^ ycheck) ? (21 << 5) | 31 : (21 << 11) | (42 << 5) | 21;
     const float r1 = 2.0, r2 = 1;
     float t = drawdist - r2 - r1*1.5;
+    float px = rdx*t + rox;
+    float py = rdy*t + roy;
+    float pz = rdz*t + roz;
     for (int j = 0; j < 20; j++) {
+      /*
+      ([(x0, rdx*t + rox), -> px
+        (x1, rdy*t + roy), -> py
+        (x2, sqrt(x0**2 + x1**2)), -> lxy
+        (x3, rdz*t + roz), -> pz
+        (x4, r1 - x2), -> -d1
+        (x5, sqrt(x3**2 + x4**2))], -> ldz
+       [x2*x5*(r2 - x5)/(rdz*x2*x3 - x4*(rdx*x0 + rdy*x1))])
+
       float px = rox + t * rdx;
       float py = roy + t * rdy;
       float pz = roz + t * rdz;
@@ -162,14 +174,32 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
       float ldz = length2(d, pz, &rdz);
       float dt = ldz - r2;
       t += dt;
-      if (dt > -0.075 && dt < 0.075) {
+      */
+      float rxy = 0, rxz = 0;
+      float lxy = length2(px, py, &rxy);
+      float d1 = lxy - r1;
+      float ldz = length2(pz, d1, &rxz);
+      // [x2*x5*(-r2 + x5)/(rdz*x2*x3 - x4*(rdx*x0 + rdy*x1))])
+      float d2 = ldz - r2;
+      //float dt = -lxy*ldz*d2/(rdz*lxy*pz + d1*(rdx*px + rdy*py));
+
+
+      float dt = d2;
+      //if (dt > 0.5) dt = 0.5;
+      //if (dt < -0.5) dt = -0.5;
+
+      px += rdx*dt;
+      py += rdy*dt;
+      pz += rdz*dt;
+
+      if (dt > -0.05 && dt < 0.05) {
         float Nx = px - r1*px/lxy;
         float Ny = py - r1*py/lxy;
         float Nz = pz;
         float Nmag = 1.0/r2;  // 1.0/sqrt(Nx*Nx + Ny*Ny + Nz*Nz);
         int lxyi = (int)(rxy * 256.0 / M_PI);
-        int ldzi = (int)(rdz * 256.0 / M_PI);
-        float check_xy = (lxyi ^ ldzi) & 0x20 ? 1.0 : 0.0;
+        int lxzi = (int)(rxz * 256.0 / M_PI);
+        float check_xy = (lxyi ^ lxzi) & 0x20 ? 1.0 : 0.0;
         float l = Nmag*0.6*(0.2 + Nx * Lx + Ny * Ly + Nz * Lz + check_xy);
         if (l > 0) {
           if (l > 1) l = 1;
@@ -179,7 +209,9 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
         }
         break;
       }
-      if (t > 15.0) {
+
+      t += dt;
+      if (t > drawdist + r2 + r1 + 0.5) {
         break;
       }
     }
