@@ -3,8 +3,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void benchmark_fpu() {
+  uint64_t start = clock();
+  float total = 0;
+  for (int i = 0; i < 100000; i++) {
+    float x = i;
+    float y = i * 2;
+    float z = i * 3;
+    float result = sqrtf(x * x + y * y + z * z);
+    total += result;
+  }
+  uint64_t end = clock();
+  printf("100k vector3 norm: %llu us, total: %f\n", end - start, total);
+}
+
+
 bool desktop_init(desktop_context_t *ctx) {
   printf("Initializing desktop badge emulator...\n");
+
+  benchmark_fpu();
 
   // Initialize SDL
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {

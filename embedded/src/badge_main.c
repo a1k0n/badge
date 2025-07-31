@@ -4,11 +4,57 @@
 
 #include "pico/stdlib.h"
 
+
+/*
+void benchmark_fpu() {
+  uint64_t start = time_us_64();
+  float total = 0;
+  for (int i = 0; i < 100000; i++) {
+    float x = i;
+    float y = i * 2;
+    float z = i * 3;
+    float result = x * x + y * y + z * z;
+    total += result;
+  }
+  uint64_t end = time_us_64();
+  printf("100k vector3 norm: %llu us, total: %f; %d ns/op\n", end - start, total, (end - start) / 100);
+
+  start = time_us_64();
+  int totalint = 0;
+  for (int i = 0; i < 100000; i++) {
+    int x = i;
+    int y = i * 2;
+    int z = i * 3;
+    int result = x * x + y * y + z * z;
+    totalint += result;
+  }
+  end = time_us_64();
+  printf("100k int3 norm: %llu us, total: %d; %d ns/op\n", end - start, totalint, (end - start) / 100);
+}
+*/
+
+static inline void enable_flush_to_zero(void) {
+  uint32_t fpscr = __builtin_arm_get_fpscr();
+  fpscr |= (1u << 24);  // bit-24 = FZ  → flush subnormals to zero
+  __builtin_arm_set_fpscr(fpscr);
+  asm volatile ("dsb 0xF":::"memory");
+  asm volatile ("isb 0xF":::"memory");
+}
+
 bool badge_init(badge_context_t *ctx) {
   // Initialize stdio for debugging
   stdio_init_all();
+  /*
+  while (!stdio_usb_connected()) {
+    sleep_ms(100);
+  }
+  */
 
   printf("Initializing badge...\n");
+
+  enable_flush_to_zero();
+
+  //benchmark_fpu();
 
   // Configure GC9A01 display
   gc9a01_config_t display_config = {

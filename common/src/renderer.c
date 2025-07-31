@@ -3,6 +3,79 @@
 #include <math.h>
 #include <string.h>
 
+// Define M_PI if not available
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+// sin(0..pi/2)
+const float halfsintbl[256] = {
+    0.,         0.00613588, 0.01227154, 0.01840673, 0.02454123, 0.0306748,
+    0.03680722, 0.04293826, 0.04906767, 0.05519524, 0.06132074, 0.06744392,
+    0.07356456, 0.07968244, 0.08579731, 0.09190896, 0.09801714, 0.10412163,
+    0.11022221, 0.11631863, 0.12241068, 0.12849811, 0.13458071, 0.14065824,
+    0.14673047, 0.15279719, 0.15885814, 0.16491312, 0.17096189, 0.17700422,
+    0.18303989, 0.18906866, 0.19509032, 0.20110463, 0.20711138, 0.21311032,
+    0.21910124, 0.22508391, 0.23105811, 0.23702361, 0.24298018, 0.24892761,
+    0.25486566, 0.26079412, 0.26671276, 0.27262136, 0.27851969, 0.28440754,
+    0.29028468, 0.29615089, 0.30200595, 0.30784964, 0.31368174, 0.31950203,
+    0.32531029, 0.33110631, 0.33688985, 0.34266072, 0.34841868, 0.35416353,
+    0.35989504, 0.365613,   0.37131719, 0.37700741, 0.38268343, 0.38834505,
+    0.39399204, 0.3996242,  0.40524131, 0.41084317, 0.41642956, 0.42200027,
+    0.42755509, 0.43309382, 0.43861624, 0.44412214, 0.44961133, 0.45508359,
+    0.46053871, 0.4659765,  0.47139674, 0.47679923, 0.48218377, 0.48755016,
+    0.49289819, 0.49822767, 0.50353838, 0.50883014, 0.51410274, 0.51935599,
+    0.52458968, 0.52980362, 0.53499762, 0.54017147, 0.54532499, 0.55045797,
+    0.55557023, 0.56066158, 0.56573181, 0.57078075, 0.57580819, 0.58081396,
+    0.58579786, 0.5907597,  0.5956993,  0.60061648, 0.60551104, 0.61038281,
+    0.61523159, 0.62005721, 0.62485949, 0.62963824, 0.63439328, 0.63912444,
+    0.64383154, 0.6485144,  0.65317284, 0.65780669, 0.66241578, 0.66699992,
+    0.67155895, 0.6760927,  0.680601,   0.68508367, 0.68954054, 0.69397146,
+    0.69837625, 0.70275474, 0.70710678, 0.7114322,  0.71573083, 0.72000251,
+    0.72424708, 0.72846439, 0.73265427, 0.73681657, 0.74095113, 0.74505779,
+    0.74913639, 0.7531868,  0.75720885, 0.76120239, 0.76516727, 0.76910334,
+    0.77301045, 0.77688847, 0.78073723, 0.7845566,  0.78834643, 0.79210658,
+    0.7958369,  0.79953727, 0.80320753, 0.80684755, 0.8104572,  0.81403633,
+    0.81758481, 0.82110251, 0.8245893,  0.82804505, 0.83146961, 0.83486287,
+    0.83822471, 0.84155498, 0.84485357, 0.84812034, 0.85135519, 0.85455799,
+    0.85772861, 0.86086694, 0.86397286, 0.86704625, 0.87008699, 0.87309498,
+    0.87607009, 0.87901223, 0.88192126, 0.8847971,  0.88763962, 0.89044872,
+    0.8932243,  0.89596625, 0.89867447, 0.90134885, 0.90398929, 0.9065957,
+    0.90916798, 0.91170603, 0.91420976, 0.91667906, 0.91911385, 0.92151404,
+    0.92387953, 0.92621024, 0.92850608, 0.93076696, 0.9329928,  0.93518351,
+    0.93733901, 0.93945922, 0.94154407, 0.94359346, 0.94560733, 0.94758559,
+    0.94952818, 0.95143502, 0.95330604, 0.95514117, 0.95694034, 0.95870347,
+    0.96043052, 0.9621214,  0.96377607, 0.96539444, 0.96697647, 0.96852209,
+    0.97003125, 0.97150389, 0.97293995, 0.97433938, 0.97570213, 0.97702814,
+    0.97831737, 0.97956977, 0.98078528, 0.98196387, 0.98310549, 0.98421009,
+    0.98527764, 0.9863081,  0.98730142, 0.98825757, 0.98917651, 0.99005821,
+    0.99090264, 0.99170975, 0.99247953, 0.99321195, 0.99390697, 0.99456457,
+    0.99518473, 0.99576741, 0.99631261, 0.9968203,  0.99729046, 0.99772307,
+    0.99811811, 0.99847558, 0.99879546, 0.99907773, 0.99932238, 0.99952942,
+    0.99969882, 0.99983058, 0.9999247,  0.99998118};
+
+float fast_sin(int x) {
+  // 0..255 -> 0..pi/2, return halfsintbl[x]
+  // 256..511 -> pi/2..pi, return halfsintbl[255 - x]
+  // 512..767 -> pi..3pi/2, return -halfsintbl[x - 512]
+  // 768..1023 -> 3pi/2..2pi, return -halfsintbl[1023 - x]
+  int i = x & 0xff;
+  switch (x & 0x300) {
+    case 0x000:
+      return halfsintbl[i];
+    case 0x100:
+      return halfsintbl[255 - i];
+    case 0x200:
+      return -halfsintbl[i];
+    case 0x300:
+      return -halfsintbl[255 - i];
+  }
+}
+
+float fast_cos(int x) {
+  return fast_sin(x + 256);
+}
+
 const uint8_t mask_x_offset[240] = {
     109, 101, 95, 91, 87,  84, 81, 78, 75, 73, 70, 68, 66, 64, 62, 61, 59, 57,
     55,  54,  52, 51, 50,  48, 47, 46, 44, 43, 42, 41, 40, 38, 37, 36, 35, 34,
@@ -66,8 +139,6 @@ void rotate2(float x, float y, float s, float c, float *xout, float *yout) {
   *yout = x * s + y * c;
 }
 
-static inline float length2(float x, float y) { return sqrtf(x * x + y * y); }
-
 void badge_renderer_init(badge_renderer_t *renderer) {
   renderer->frame_count = 0;
 
@@ -81,14 +152,15 @@ void badge_advance_frame(badge_renderer_t *renderer) {
 
   // we're using a Cortex M33 which has an FPU, but only once per frame here
   // might replace with sine table so we get clean wrapping around 2pi
-  renderer->sA = sinf(renderer->angleA);
-  renderer->cA = cosf(renderer->angleA);
-  renderer->sB = sinf(renderer->angleB);
-  renderer->cB = cosf(renderer->angleB);
+  renderer->sA = fast_sin(renderer->angleA);
+  renderer->cA = fast_cos(renderer->angleA);
+  renderer->sB = fast_sin(renderer->angleB);
+  renderer->cB = fast_cos(renderer->angleB);
 
-  renderer->angleA += 0.037;
-  renderer->angleB += 0.011;
+  renderer->angleA += 1;
+  renderer->angleB += 5;
 }
+
 
 float fast_atan2f(float y, float x) {
   // https://math.stackexchange.com/a/1105038
@@ -178,79 +250,70 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
   int ycheck = ((ooy + (renderer->frame_count << 1)) & 0x40) ? 1 : 0;
 
   float rdy = (y - 120) / 120.0;
-  float rdz1 = 1.0;
+  float rdz1;
   // rotate yz by A
   rotate2(rdy, 1.0, renderer->sA, renderer->cA, &rdy, &rdz1);
 
+  // Pre-compute constants for better performance
+  const float inv_120 = 1.0f / 120.0f;
+  const float sB = renderer->sB;
+  const float cB = renderer->cB;
+  
   for (uint16_t i = 0; i < width; i++) {
-    float rdx = (x_offset + i - 120) / 120.0;
-    float rdz = rdz1;
+    float rdx = (x_offset + i - 120) * inv_120;
 
-    // rotate xz by B
-    rotate2(rdx, rdz1, renderer->sB, renderer->cB, &rdx, &rdz);
+    // rotate xz by B (inlined for better performance)
+    float rdx_rot = rdx * cB - rdz1 * sB;
+    float rdz = rdx * sB + rdz1 * cB;
+    rdx = rdx_rot;
 
     int xcheck2 = xcheck & 0x4000 ? 1 : 0;
     // (0, 21, 63) : (42, 42, 42)
     uint16_t color = (xcheck2 ^ ycheck) ? bg0 : bg1;
+
+    // ray marching
     float t = drawdist - r2 - r1 * 1.5;
     float px = rdx * t + rox;
     float py = rdy * t + roy;
     float pz = rdz * t + roz;
-    for (int j = 0; j < 2; j++) {
-      /*
-      ([(x0, rdx*t + rox), -> px
-        (x1, rdy*t + roy), -> py
-        (x2, sqrt(x0**2 + x1**2)), -> lxy
-        (x3, rdz*t + roz), -> pz
-        (x4, r1 - x2), -> -d1
-        (x5, sqrt(x3**2 + x4**2))], -> ldz
-       [x2*x5*(r2 - x5)/(rdz*x2*x3 - x4*(rdx*x0 + rdy*x1))])
-
-      float px = rox + t * rdx;
-      float py = roy + t * rdy;
-      float pz = roz + t * rdz;
-      float rxy = 0, rdz = 0;
-      float lxy = length2(px, py, &rxy);
-      float d = lxy - r1;
-      float ldz = length2(d, pz, &rdz);
-      float dt = ldz - r2;
-      t += dt;
-      */
-      float lxy = length2(px, py);
+    for (int j = 0; j < 20; j++) {
+      // Optimized ray marching with reduced function calls
+      float lxy = px * px + py * py;
+      lxy = sqrtf(lxy);
       float d1 = lxy - r1;
-      float ldz = length2(pz, d1);
-      // [x2*x5*(-r2 + x5)/(rdz*x2*x3 - x4*(rdx*x0 + rdy*x1))])
+      float ldz = pz * pz + d1 * d1;
+      ldz = sqrtf(ldz);
       float d2 = ldz - r2;
-      // float dt = -lxy*ldz*d2/(rdz*lxy*pz + d1*(rdx*px + rdy*py));
 
       float dt = d2;
-      // if (dt > 0.5) dt = 0.5;
-      // if (dt < -0.5) dt = -0.5;
 
       px += rdx * dt;
       py += rdy * dt;
       pz += rdz * dt;
 
-      if (dt > -0.05 && dt < 0.05) {
-        float Nx = px - r1 * px / lxy;
-        float Ny = py - r1 * py / lxy;
+      if (dt > -0.05f && dt < 0.05f) {
+        // Optimized normal calculation
+        float inv_lxy = 1.0f / lxy;
+        float Nx = px * (1.0f - r1 * inv_lxy);
+        float Ny = py * (1.0f - r1 * inv_lxy);
         float Nz = pz;
-        float Nmag = 1.0 / r2;  // 1.0/sqrt(Nx*Nx + Ny*Ny + Nz*Nz);
+        float Nmag = 1.0f / r2;
+        
+        // Optimized texture coordinate calculation
         float rxy = fast_atan2f(py, px);
         float rxz = fast_atan2f(pz, d1);
-        int lxyi = (int)(rxy * 256.0 / M_PI);
-        int lxzi = (int)(rxz * 256.0 / M_PI);
-        float check_xy = (lxyi ^ lxzi) & 0x20 ? 1.0 + palette / 256.0 : 0.0;
-        float l = Nmag * 0.6 * (0.2 + Nx * Lx + Ny * Ly + Nz * Lz + check_xy);
+        int lxyi = (int)(rxy * 256.0f / M_PI);
+        int lxzi = (int)(rxz * 256.0f / M_PI);
+        float check_xy = (lxyi ^ lxzi) & 0x20 ? 1.0f + palette * (1.0f / 256.0f) : 0.0f;
+        
+        // Optimized lighting calculation
+        float l = Nmag * 0.6f * (0.2f + Nx * Lx + Ny * Ly + Nz * Lz + check_xy);
         if (l > 0) {
-          if (l > 1) l = 1;
+          if (l > 1.0f) l = 1.0f;
           int k = (int)(l * (NPALETTE - 1));
-          int r =
-              (palette1_r[k] * (256 - palette) + palette2_r[k] * palette) >> 8;
-          int g =
-              (palette1_g[k] * (256 - palette) + palette2_g[k] * palette) >> 8;
-          int b =
-              (palette1_b[k] * (256 - palette) + palette2_b[k] * palette) >> 8;
+          int r = (palette1_r[k] * (256 - palette) + palette2_r[k] * palette) >> 8;
+          int g = (palette1_g[k] * (256 - palette) + palette2_g[k] * palette) >> 8;
+          int b = (palette1_b[k] * (256 - palette) + palette2_b[k] * palette) >> 8;
           color = BADGE_RGB565(r, g, b);
         } else {
           color = 0x0000;
@@ -259,7 +322,7 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
       }
 
       t += dt;
-      if (t > drawdist + r2 + r1 + 0.5) {
+      if (t > drawdist + r2 + r1 + 0.5f) {
         break;
       }
     }

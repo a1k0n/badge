@@ -8,10 +8,10 @@ set(CMAKE_C_COMPILER arm-none-eabi-gcc)
 set(CMAKE_CXX_COMPILER arm-none-eabi-g++)
 set(CMAKE_ASM_COMPILER arm-none-eabi-gcc)
 
-# ARM Cortex-M33 flags for RP2350 with hardware FPU
-set(CMAKE_C_FLAGS_INIT "-mcpu=cortex-m33 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16")
-set(CMAKE_CXX_FLAGS_INIT "-mcpu=cortex-m33 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16")
-set(CMAKE_ASM_FLAGS_INIT "-mcpu=cortex-m33 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16")
+# ARM Cortex-M33 flags for RP2350 with hardware FPU and optimizations
+set(CMAKE_C_FLAGS_INIT "-mcpu=cortex-m33 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16 -march=armv8-m.main+dsp+fp -O3 -ffast-math -funroll-loops -ftree-vectorize -fomit-frame-pointer")
+set(CMAKE_CXX_FLAGS_INIT "-mcpu=cortex-m33 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16 -march=armv8-m.main+dsp+fp -O3 -ffast-math -funroll-loops -ftree-vectorize -fomit-frame-pointer")
+set(CMAKE_ASM_FLAGS_INIT "-mcpu=cortex-m33 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16 -march=armv8-m.main+dsp+fp")
 
 # Where to find the target environment
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)

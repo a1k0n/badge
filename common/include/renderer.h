@@ -41,7 +41,7 @@ typedef struct {
   float sA, cA;  // sin/cos of A
   float sB, cB;  // sin/cos of B
 
-  float angleA, angleB;
+  int angleA, angleB;
 } badge_renderer_t;
 
 // Initialize renderer
