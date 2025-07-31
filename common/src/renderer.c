@@ -1,4 +1,5 @@
 #include "renderer.h"
+
 #include <math.h>
 #include <string.h>
 
@@ -61,19 +62,17 @@ const uint16_t palette2_b[] = {
 const int NPALETTE = sizeof(palette1_r) / sizeof(palette1_r[0]);
 
 void rotate2(float x, float y, float s, float c, float *xout, float *yout) {
-    *xout = x*c - y*s;
-    *yout = x*s + y*c;
+  *xout = x * c - y * s;
+  *yout = x * s + y * c;
 }
 
-float length2(float x, float y) {
-  return sqrtf(x*x + y*y);
-}
+float length2(float x, float y) { return sqrtf(x * x + y * y); }
 
 void badge_renderer_init(badge_renderer_t *renderer) {
-    renderer->frame_count = 0;
+  renderer->frame_count = 0;
 
-    renderer->angleA = 0;
-    renderer->angleB = 0;
+  renderer->angleA = 0;
+  renderer->angleB = 0;
 }
 
 // always call this before rendering a frame
@@ -103,7 +102,7 @@ float fast_atan2f(float y, float x) {
   if (abs_y > abs_x) r = 1.57079637f - r;
   if (x < 0) r = 3.14159274f - r;
   if (y < 0) r = -r;
-  
+
   return r;
 }
 
@@ -158,12 +157,12 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     palette = smoothstep(256, 0, t);
   }
 
-  int bg0_r = (bg10_r * (256-palette) + bg20_r * palette) >> 8;
-  int bg0_g = (bg10_g * (256-palette) + bg20_g * palette) >> 8;
-  int bg0_b = (bg10_b * (256-palette) + bg20_b * palette) >> 8;
-  int bg1_r = (bg11_r * (256-palette) + bg21_r * palette) >> 8;
-  int bg1_g = (bg11_g * (256-palette) + bg21_g * palette) >> 8;
-  int bg1_b = (bg11_b * (256-palette) + bg21_b * palette) >> 8;
+  int bg0_r = (bg10_r * (256 - palette) + bg20_r * palette) >> 8;
+  int bg0_g = (bg10_g * (256 - palette) + bg20_g * palette) >> 8;
+  int bg0_b = (bg10_b * (256 - palette) + bg20_b * palette) >> 8;
+  int bg1_r = (bg11_r * (256 - palette) + bg21_r * palette) >> 8;
+  int bg1_g = (bg11_g * (256 - palette) + bg21_g * palette) >> 8;
+  int bg1_b = (bg11_b * (256 - palette) + bg21_b * palette) >> 8;
   uint16_t bg0 = (bg0_r << 11) | (bg0_g << 5) | bg0_b;
   uint16_t bg1 = (bg1_r << 11) | (bg1_g << 5) | bg1_b;
 
@@ -175,8 +174,8 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
   rotate2(Lx, Lz, renderer->sB, renderer->cB, &Lx, &Lz);
 
   int ooy = 65536 / (y + 50);
-  int xcheck = -width/2 * ooy + (renderer->frame_count << 9);
-  int ycheck = ((ooy + (renderer->frame_count<<1)) & 0x40) ? 1 : 0;
+  int xcheck = -width / 2 * ooy + (renderer->frame_count << 9);
+  int ycheck = ((ooy + (renderer->frame_count << 1)) & 0x40) ? 1 : 0;
 
   for (uint16_t i = 0; i < width; i++) {
     float rdx = (x_offset + i - 120) / 120.0;
@@ -191,10 +190,10 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     int xcheck2 = xcheck & 0x4000 ? 1 : 0;
     // (0, 21, 63) : (42, 42, 42)
     uint16_t color = (xcheck2 ^ ycheck) ? bg0 : bg1;
-    float t = drawdist - r2 - r1*1.5;
-    float px = rdx*t + rox;
-    float py = rdy*t + roy;
-    float pz = rdz*t + roz;
+    float t = drawdist - r2 - r1 * 1.5;
+    float px = rdx * t + rox;
+    float py = rdy * t + roy;
+    float pz = rdz * t + roz;
     for (int j = 0; j < 20; j++) {
       /*
       ([(x0, rdx*t + rox), -> px
@@ -220,34 +219,36 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
       float ldz = length2(pz, d1);
       // [x2*x5*(-r2 + x5)/(rdz*x2*x3 - x4*(rdx*x0 + rdy*x1))])
       float d2 = ldz - r2;
-      //float dt = -lxy*ldz*d2/(rdz*lxy*pz + d1*(rdx*px + rdy*py));
-
+      // float dt = -lxy*ldz*d2/(rdz*lxy*pz + d1*(rdx*px + rdy*py));
 
       float dt = d2;
-      //if (dt > 0.5) dt = 0.5;
-      //if (dt < -0.5) dt = -0.5;
+      // if (dt > 0.5) dt = 0.5;
+      // if (dt < -0.5) dt = -0.5;
 
-      px += rdx*dt;
-      py += rdy*dt;
-      pz += rdz*dt;
+      px += rdx * dt;
+      py += rdy * dt;
+      pz += rdz * dt;
 
       if (dt > -0.05 && dt < 0.05) {
-        float Nx = px - r1*px/lxy;
-        float Ny = py - r1*py/lxy;
+        float Nx = px - r1 * px / lxy;
+        float Ny = py - r1 * py / lxy;
         float Nz = pz;
-        float Nmag = 1.0/r2;  // 1.0/sqrt(Nx*Nx + Ny*Ny + Nz*Nz);
+        float Nmag = 1.0 / r2;  // 1.0/sqrt(Nx*Nx + Ny*Ny + Nz*Nz);
         float rxy = fast_atan2f(py, px);
         float rxz = fast_atan2f(pz, d1);
         int lxyi = (int)(rxy * 256.0 / M_PI);
         int lxzi = (int)(rxz * 256.0 / M_PI);
-        float check_xy = (lxyi ^ lxzi) & 0x20 ? 1.0 + palette/256.0 : 0.0;
-        float l = Nmag*0.6*(0.2 + Nx * Lx + Ny * Ly + Nz * Lz + check_xy);
+        float check_xy = (lxyi ^ lxzi) & 0x20 ? 1.0 + palette / 256.0 : 0.0;
+        float l = Nmag * 0.6 * (0.2 + Nx * Lx + Ny * Ly + Nz * Lz + check_xy);
         if (l > 0) {
           if (l > 1) l = 1;
           int k = (int)(l * (NPALETTE - 1));
-          int r = (palette1_r[k] * (256-palette) + palette2_r[k] * palette) >> 8;
-          int g = (palette1_g[k] * (256-palette) + palette2_g[k] * palette) >> 8;
-          int b = (palette1_b[k] * (256-palette) + palette2_b[k] * palette) >> 8;
+          int r =
+              (palette1_r[k] * (256 - palette) + palette2_r[k] * palette) >> 8;
+          int g =
+              (palette1_g[k] * (256 - palette) + palette2_g[k] * palette) >> 8;
+          int b =
+              (palette1_b[k] * (256 - palette) + palette2_b[k] * palette) >> 8;
           color = (r << 11) | (g << 5) | b;
         } else {
           color = 0x0000;

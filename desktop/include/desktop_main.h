@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL.h>
 #include <stdbool.h>
+
 #include "renderer.h"
 
 #define DESKTOP_SCALE_FACTOR 4
@@ -11,18 +12,18 @@
 
 // Desktop application context
 typedef struct {
-    SDL_Window *window;
-    SDL_Renderer *sdl_renderer;
-    SDL_Texture *texture;
-    
-    badge_renderer_t renderer;
-    
-    uint32_t frame_count;
-    bool running;
-    
-    // Performance tracking
-    uint32_t last_frame_time;
-    uint32_t target_frame_time; // 33ms for ~30 FPS
+  SDL_Window *window;
+  SDL_Renderer *sdl_renderer;
+  SDL_Texture *texture;
+
+  badge_renderer_t renderer;
+
+  uint32_t frame_count;
+  bool running;
+
+  // Performance tracking
+  uint32_t last_frame_time;
+  uint32_t target_frame_time;  // 33ms for ~30 FPS
 } desktop_context_t;
 
 // Application lifecycle
@@ -40,4 +41,4 @@ void desktop_update_display(desktop_context_t *ctx);
 // Utility functions
 uint32_t desktop_rgb565_to_rgb888(badge_color_t color);
 
-#endif // DESKTOP_MAIN_H 
+#endif  // DESKTOP_MAIN_H

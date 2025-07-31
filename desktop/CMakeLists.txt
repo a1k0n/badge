@@ -14,6 +14,7 @@ add_executable(${TARGET_NAME}
 target_link_libraries(${TARGET_NAME}
     badge_common
     ${SDL2_LIBRARIES}
+    m
 )
 
 # Include directories

@@ -6,16 +6,16 @@
 
 // Main badge application context
 typedef struct {
-    gc9a01_t display;
-    badge_renderer_t renderer;
-    
-    // Double buffering for DMA interleaving
-    badge_color_t scanline_buffer_a[BADGE_DISPLAY_WIDTH];
-    badge_color_t scanline_buffer_b[BADGE_DISPLAY_WIDTH];
-    bool use_buffer_a; // ping-pong between buffers
-    
-    uint32_t frame_count;
-    bool running;
+  gc9a01_t display;
+  badge_renderer_t renderer;
+
+  // Double buffering for DMA interleaving
+  badge_color_t scanline_buffer_a[BADGE_DISPLAY_WIDTH];
+  badge_color_t scanline_buffer_b[BADGE_DISPLAY_WIDTH];
+  bool use_buffer_a;  // ping-pong between buffers
+
+  uint32_t frame_count;
+  bool running;
 } badge_context_t;
 
 // Application lifecycle
@@ -26,4 +26,4 @@ void badge_shutdown(badge_context_t *ctx);
 // Rendering functions
 void badge_render_frame(badge_context_t *ctx);
 
-#endif // BADGE_MAIN_H 
+#endif  // BADGE_MAIN_H
