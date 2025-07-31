@@ -66,7 +66,7 @@ void rotate2(float x, float y, float s, float c, float *xout, float *yout) {
   *yout = x * s + y * c;
 }
 
-float length2(float x, float y) { return sqrtf(x * x + y * y); }
+static inline float length2(float x, float y) { return sqrtf(x * x + y * y); }
 
 void badge_renderer_init(badge_renderer_t *renderer) {
   renderer->frame_count = 0;
@@ -177,15 +177,17 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
   int xcheck = -width / 2 * ooy + (renderer->frame_count << 9);
   int ycheck = ((ooy + (renderer->frame_count << 1)) & 0x40) ? 1 : 0;
 
+  float rdy = (y - 120) / 120.0;
+  float rdz1 = 1.0;
+  // rotate yz by A
+  rotate2(rdy, 1.0, renderer->sA, renderer->cA, &rdy, &rdz1);
+
   for (uint16_t i = 0; i < width; i++) {
     float rdx = (x_offset + i - 120) / 120.0;
-    float rdy = (y - 120) / 120.0;
-    float rdz = 1.0;
+    float rdz = rdz1;
 
-    // rotate yz by A
-    rotate2(rdy, rdz, renderer->sA, renderer->cA, &rdy, &rdz);
     // rotate xz by B
-    rotate2(rdx, rdz, renderer->sB, renderer->cB, &rdx, &rdz);
+    rotate2(rdx, rdz1, renderer->sB, renderer->cB, &rdx, &rdz);
 
     int xcheck2 = xcheck & 0x4000 ? 1 : 0;
     // (0, 21, 63) : (42, 42, 42)
@@ -194,7 +196,7 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     float px = rdx * t + rox;
     float py = rdy * t + roy;
     float pz = rdz * t + roz;
-    for (int j = 0; j < 0; j++) {
+    for (int j = 0; j < 2; j++) {
       /*
       ([(x0, rdx*t + rox), -> px
         (x1, rdy*t + roy), -> py

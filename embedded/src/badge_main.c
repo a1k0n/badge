@@ -19,7 +19,7 @@ bool badge_init(badge_context_t *ctx) {
       .pin_mosi = 3,
       .pin_dc = 5,
       .pin_blk = 0,
-      .use_dma = 0,
+      .use_dma = 1,
       .dma_channel = -1  // Will be assigned by driver
   };
 
@@ -33,7 +33,7 @@ bool badge_init(badge_context_t *ctx) {
   badge_renderer_init(&ctx->renderer);
 
   // Initialize application state
-  ctx->frame_count = 0;
+  //ctx->frame_count = 0;
   ctx->running = true;
   ctx->use_buffer_a = true;  // Start with buffer A
 
@@ -50,16 +50,16 @@ void badge_run(badge_context_t *ctx) {
     badge_advance_frame(&ctx->renderer);
 
     badge_render_frame(ctx);
-    ctx->frame_count++;
+    //ctx->frame_count++;
 
     // Simple frame rate control - approximately 30 FPS
     // sleep_ms(33);
 
     // Print frame count periodically
-    if (ctx->frame_count % 10 == 0) {  // Every 10 frames
-      printf("Frame: %lu, Renderer frame: %lu\n", ctx->frame_count,
-             ctx->renderer.frame_count);
-    }
+    //if (ctx->frame_count % 10 == 0) {  // Every 10 frames
+    //  printf("Frame: %lu, Renderer frame: %lu\n", ctx->frame_count,
+    //         ctx->renderer.frame_count);
+    //}
   }
 }
 
@@ -92,7 +92,7 @@ void badge_render_frame(badge_context_t *ctx) {
 
     // Write scanline to display using DMA with proper synchronization
     // This will wait for previous DMA, set window, then start new DMA
-    gc9a01_write_scanline(&ctx->display, current_buffer, x_offset, y, width);
+    gc9a01_write_scanline_dma(&ctx->display, current_buffer, x_offset, y, width);
 
     // Switch to other buffer for next scanline while DMA writes current one
     ctx->use_buffer_a = !ctx->use_buffer_a;
@@ -101,5 +101,5 @@ void badge_render_frame(badge_context_t *ctx) {
   }
 
   // Wait for final DMA transfer to complete before starting next frame
-  // gc9a01_dma_wait(&ctx->display);
+  gc9a01_dma_wait(&ctx->display);
 }

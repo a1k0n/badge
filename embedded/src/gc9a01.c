@@ -5,6 +5,7 @@
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
+#include "pico/platform.h"
 #include "pico/stdlib.h"
 
 static void gc9a01_gpio_init(gc9a01_t *display) {
@@ -149,8 +150,15 @@ void gc9a01_write_data_dma(gc9a01_t *display, const uint8_t *data, size_t len) {
     return;
   }
 
-  // Wait for any previous DMA transfer to complete first
+  // CRITICAL: Wait for any previous DMA transfer to complete first
+  // This ensures CS pin state is correct and SPI bus is available
   gc9a01_dma_wait(display);
+
+  // CRITICAL: Ensure SPI bus is completely idle before starting new transfer
+  // This prevents corruption of window commands that might be pending
+  while (spi_is_busy(display->config.spi_port)) {
+    tight_loop_contents();
+  }
 
   gpio_put(display->config.pin_cs, 0);
   gpio_put(display->config.pin_dc, 1);  // Data mode
@@ -201,8 +209,19 @@ void gc9a01_write_scanline_dma(gc9a01_t *display, const badge_color_t *pixels,
   // This ensures CS pin state is correct and SPI bus is available
   gc9a01_dma_wait(display);
 
+  // CRITICAL: Ensure SPI bus is completely idle before setting window
+  // This prevents corruption of window commands
+  while (spi_is_busy(display->config.spi_port)) {
+    tight_loop_contents();
+  }
+
   // Now safe to set window with blocking SPI commands
   gc9a01_set_window(display, x_offset, y, x_offset + width - 1, y);
+
+  // CRITICAL: Ensure window commands have completed before starting DMA
+  while (spi_is_busy(display->config.spi_port)) {
+    tight_loop_contents();
+  }
 
   // Start DMA transfer of pixel data (non-blocking)
   // This will run in background while CPU renders next scanline
@@ -214,6 +233,12 @@ bool gc9a01_dma_is_busy(gc9a01_t *display) {
 
   bool busy = dma_channel_is_busy(display->config.dma_channel);
   if (!busy && display->dma_busy) {
+    // CRITICAL: Wait for SPI to finish before releasing CS
+    // This ensures all data has been transmitted
+    while (spi_is_busy(display->config.spi_port)) {
+      tight_loop_contents();
+    }
+    
     // DMA transfer completed, clean up CS pin state
     gpio_put(display->config.pin_cs, 1);
     display->dma_busy = false;
