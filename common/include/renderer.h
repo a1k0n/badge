@@ -12,13 +12,21 @@
 typedef uint16_t badge_color_t;
 
 // RGB565 color helpers
-#define BADGE_RGB565(r, g, b) \
-  (((r & 0x1F) << 11) | ((g & 0x3F) << 5) | (b & 0x1F))
 #define BADGE_COLOR_BLACK 0x0000
 #define BADGE_COLOR_WHITE 0xFFFF
 #define BADGE_COLOR_RED 0xF800
 #define BADGE_COLOR_GREEN 0x07E0
 #define BADGE_COLOR_BLUE 0x001F
+
+// Endian swapping for display compatibility
+// Embedded targets need endian swap, desktop does not
+#ifdef BUILD_EMBEDDED
+#define BADGE_RGB565(r, g, b) \
+  __builtin_bswap16(((b & 0x1F) << 11) | ((g & 0x3F) << 5) | (r & 0x1F))
+#else
+#define BADGE_RGB565(r, g, b) \
+  (((r & 0x1F) << 11) | ((g & 0x3F) << 5) | (b & 0x1F))
+#endif
 
 extern const uint8_t mask_x_offset[240];
 #define BADGE_MASK_X_OFFSET(y) mask_x_offset[y]

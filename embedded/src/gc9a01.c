@@ -64,6 +64,15 @@ bool gc9a01_init(gc9a01_t *display, const gc9a01_config_t *config) {
     gc9a01_dma_init(display);
   }
 
+#define writecommand(cmd) gc9a01_write_command(display, cmd)
+#define writedata(data) gc9a01_write_data1(display, data)
+#define delay(ms) sleep_ms(ms)
+#include "gc9a01_init.h"
+#undef writecommand
+#undef writedata
+#undef delay
+
+/*
   // Software reset
   gc9a01_write_command(display, GC9A01_SWRESET);
   sleep_ms(120);
@@ -77,11 +86,6 @@ bool gc9a01_init(gc9a01_t *display, const gc9a01_config_t *config) {
   uint8_t colmod_data = 0x05;  // 16 bits/pixel
   gc9a01_write_data(display, &colmod_data, 1);
 
-  // Set memory access control (MADCTL)
-  gc9a01_write_command(display, GC9A01_MADCTL);
-  uint8_t madctl_data = 0x00;  // Normal orientation
-  gc9a01_write_data(display, &madctl_data, 1);
-
   // Set display function control
   gc9a01_write_command(display, GC9A01_DFUNCTR);
   uint8_t dfunctr_data[] = {0x00, 0x20, 0x00};
@@ -89,6 +93,13 @@ bool gc9a01_init(gc9a01_t *display, const gc9a01_config_t *config) {
 
   // Turn on display
   gc9a01_display_on(display, true);
+  */
+
+  // Set memory access control (MADCTL)
+  gc9a01_write_command(display, GC9A01_MADCTL);
+  uint8_t madctl_data = 0x00;  // Normal orientation
+  gc9a01_write_data(display, &madctl_data, 1);
+
 
   display->initialized = true;
   display->dma_busy = false;
@@ -122,6 +133,13 @@ void gc9a01_write_data(gc9a01_t *display, const uint8_t *data, size_t len) {
   gpio_put(display->config.pin_cs, 0);
   gpio_put(display->config.pin_dc, 1);  // Data mode
   spi_write_blocking(display->config.spi_port, data, len);
+  gpio_put(display->config.pin_cs, 1);
+}
+
+void gc9a01_write_data1(gc9a01_t *display, uint8_t data) {
+  gpio_put(display->config.pin_cs, 0);
+  gpio_put(display->config.pin_dc, 1);  // Data mode
+  spi_write_blocking(display->config.spi_port, &data, 1);
   gpio_put(display->config.pin_cs, 1);
 }
 

@@ -163,8 +163,8 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
   int bg1_r = (bg11_r * (256 - palette) + bg21_r * palette) >> 8;
   int bg1_g = (bg11_g * (256 - palette) + bg21_g * palette) >> 8;
   int bg1_b = (bg11_b * (256 - palette) + bg21_b * palette) >> 8;
-  uint16_t bg0 = (bg0_r << 11) | (bg0_g << 5) | bg0_b;
-  uint16_t bg1 = (bg1_r << 11) | (bg1_g << 5) | bg1_b;
+  uint16_t bg0 = BADGE_RGB565(bg0_r, bg0_g, bg0_b);
+  uint16_t bg1 = BADGE_RGB565(bg1_r, bg1_g, bg1_b);
 
   // rotate yz by A
   rotate2(roy, roz, renderer->sA, renderer->cA, &roy, &roz);
@@ -194,7 +194,7 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     float px = rdx * t + rox;
     float py = rdy * t + roy;
     float pz = rdz * t + roz;
-    for (int j = 0; j < 20; j++) {
+    for (int j = 0; j < 0; j++) {
       /*
       ([(x0, rdx*t + rox), -> px
         (x1, rdy*t + roy), -> py
@@ -249,7 +249,7 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
               (palette1_g[k] * (256 - palette) + palette2_g[k] * palette) >> 8;
           int b =
               (palette1_b[k] * (256 - palette) + palette2_b[k] * palette) >> 8;
-          color = (r << 11) | (g << 5) | b;
+          color = BADGE_RGB565(r, g, b);
         } else {
           color = 0x0000;
         }

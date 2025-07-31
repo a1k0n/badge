@@ -59,6 +59,7 @@ void gc9a01_set_inversion(gc9a01_t *display, bool invert);
 // Low-level communication
 void gc9a01_write_command(gc9a01_t *display, uint8_t cmd);
 void gc9a01_write_data(gc9a01_t *display, const uint8_t *data, size_t len);
+void gc9a01_write_data1(gc9a01_t *display, uint8_t data);
 void gc9a01_write_data_dma(gc9a01_t *display, const uint8_t *data, size_t len);
 
 // Window/region setting

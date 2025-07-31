@@ -36,23 +36,6 @@ pico_add_extra_outputs(${TARGET_NAME})
 pico_enable_stdio_usb(${TARGET_NAME} 1)
 pico_enable_stdio_uart(${TARGET_NAME} 0)
 
-# Define pins for RP2350 with GC9A01
-target_compile_definitions(${TARGET_NAME} PRIVATE
-    # SPI configuration
-    GC9A01_SPI_PORT=spi0
-    GC9A01_SPI_BAUDRATE=62500000
-    
-    # Pin definitions
-    GC9A01_PIN_CS=1
-    GC9A01_PIN_DC=3
-    GC9A01_PIN_MOSI=10
-    GC9A01_PIN_SCK=8
-    GC9A01_PIN_BLK=6
-    
-    # DMA configuration
-    GC9A01_USE_DMA=1
-)
-
 # Add flash target using picotool
 add_custom_target(flash
     COMMAND picotool load ${TARGET_NAME}.elf.uf2 -f
