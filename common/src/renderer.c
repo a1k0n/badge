@@ -184,6 +184,234 @@ float smoothstep(float a, float b, float t) {
   return t * (b - a) + a;
 }
 
+float dot(float a[3], float b[3]) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+#define     EQN_EPS     1e-9
+#define	    IsZero(x)	((x) > -EQN_EPS && (x) < EQN_EPS)
+
+int SolveQuadric(float c[2], float s[2]) {
+  float p, q, D;
+
+  /* normal form: x^2 + px + q = 0 */
+
+  // assume already normalized: c[2] = 1
+  p = c[1] * 0.5;
+  q = c[0];
+
+  D = p * p - q;
+
+  if (IsZero(D)) {
+    s[0] = -p;
+    return 1;
+  } else if (D < 0) {
+    return 0;
+  } else {  // if (D > 0)
+    float sqrt_D = sqrtf(D);
+
+    s[0] = sqrt_D - p;
+    s[1] = -sqrt_D - p;
+    return 2;
+  }
+}
+
+int SolveCubic(float c[3], float s[3]) {
+  int i, num;
+  float sub;
+  float A, B, C;
+  float sq_A, p, q;
+  float cb_p, D;
+
+  /* normal form: x^3 + Ax^2 + Bx + C = 0 */
+
+  // assume already normalized: c[3] = 1
+  A = c[2];
+  B = c[1];
+  C = c[0];
+
+  /*  substitute x = y - A/3 to eliminate quadric term:
+      x^3 +px + q = 0 */
+
+  sq_A = A * A;
+  p = 1.0 / 3 * (-1.0 / 3 * sq_A + B);
+  q = 1.0 / 2 * (2.0 / 27 * A * sq_A - 1.0 / 3 * A * B + C);
+
+  /* use Cardano's formula */
+
+  cb_p = p * p * p;
+  D = q * q + cb_p;
+
+  if (IsZero(D)) {
+    if (IsZero(q)) { // one triple solution
+      s[0] = 0;
+      num = 1;
+    } else { // one single and one double solution
+      float u = cbrtf(-q);
+      s[0] = 2 * u;
+      s[1] = -u;
+      num = 2;
+    }
+  } else if (D < 0) { // Casus irreducibilis: three real solutions
+    float phi = 1.0 / 3 * acosf(-q / sqrtf(-cb_p));
+    float t = 2 * sqrtf(-p);
+
+    s[0] = t * cosf(phi);
+    s[1] = -t * cosf(phi + M_PI / 3);
+    s[2] = -t * cosf(phi - M_PI / 3);
+    num = 3;
+  } else { // one real solution
+    float sqrt_D = sqrtf(D);
+    float u = cbrtf(sqrt_D - q);
+    float v = -cbrtf(sqrt_D + q);
+
+    s[0] = u + v;
+    num = 1;
+  }
+
+  /* resubstitute */
+
+  sub = 1.0 / 3 * A;
+
+  for (i = 0; i < num; ++i) s[i] -= sub;
+
+  return num;
+}
+
+int SolveQuartic(float c[5], float s[4]) {
+  float coeffs[4];
+  float z, u, v, sub;
+  float A, B, C, D;
+  float sq_A, p, q, r;
+  int i, num;
+
+  /* normal form: x^4 + Ax^3 + Bx^2 + Cx + D = 0 */
+
+  // assume already normalized: c[4] = 1
+  float k1 = 1.0 / c[4];
+  A = c[3] * k1;
+  B = c[2] * k1;
+  C = c[1] * k1;
+  D = c[0] * k1;
+
+  /*  substitute x = y - A/4 to eliminate cubic term:
+      x^4 + px^2 + qx + r = 0 */
+
+  sq_A = A * A;
+  p = -3.0 / 8 * sq_A + B;
+  q = 1.0 / 8 * sq_A * A - 1.0 / 2 * A * B + C;
+  r = -3.0 / 256 * sq_A * sq_A + 1.0 / 16 * sq_A * B - 1.0 / 4 * A * C + D;
+
+  if (IsZero(r)) {
+    /* no absolute term: y(y^3 + py + q) = 0 */
+
+    coeffs[0] = q;
+    coeffs[1] = p;
+    coeffs[2] = 0;
+
+    num = SolveCubic(coeffs, s);
+
+    s[num++] = 0;
+  } else {
+    /* solve the resolvent cubic ... */
+
+    coeffs[0] = 1.0 / 2 * r * p - 1.0 / 8 * q * q;
+    coeffs[1] = -r;
+    coeffs[2] = -1.0 / 2 * p;
+
+    (void)SolveCubic(coeffs, s);
+
+    /* ... and take the one real solution ... */
+
+    z = s[0];
+
+    /* ... to build two quadric equations */
+
+    u = z * z - r;
+    v = 2 * z - p;
+
+    if (IsZero(u))
+      u = 0;
+    else if (u > 0)
+      u = sqrt(u);
+    else
+      return 0;
+
+    if (IsZero(v))
+      v = 0;
+    else if (v > 0)
+      v = sqrt(v);
+    else
+      return 0;
+
+    coeffs[0] = z - u;
+    coeffs[1] = q < 0 ? -v : v;
+
+    num = SolveQuadric(coeffs, s);
+
+    coeffs[0] = z + u;
+    coeffs[1] = q < 0 ? v : -v;
+
+    num += SolveQuadric(coeffs, s + num);
+  }
+
+  /* resubstitute */
+
+  sub = 1.0 / 4 * A;
+
+  for (i = 0; i < num; ++i) s[i] -= sub;
+
+  return num;
+}
+
+int intersectSphere(float o[3], float d[3], float r, float *tHit) {
+  float a = dot(d, d);
+  float b = 2 * dot(o, d);
+  float c = dot(o, o) - r * r;
+  float discriminant = b * b - 4 * a * c;
+  if (discriminant < 0) return 0;
+  float sqrt_discriminant = sqrtf(discriminant);
+  float t1 = (-b - sqrt_discriminant) / (2 * a);
+  float t2 = (-b + sqrt_discriminant) / (2 * a);
+  if (t2 < t1) {
+    t1 = t2;
+  }
+  if (t1 > 0) {
+    *tHit = t1;
+    return 1;
+  }
+  return 0;
+}
+
+int intersectTorus(float o[3], float d[3], float R, float r, float *tHit) {
+  // precompute coefficients
+  float k1 = dot(d, d); // should be 1 but is not quite
+  float k2 = 2.0 * dot(o, d);
+  float k3 = dot(o, o) + R * R - r * r;
+  float q = 4 * R * R * (d[0] * d[0] + d[1] * d[1]);
+  float p = 8 * R * R * (o[0] * d[0] + o[1] * d[1]);
+  float s = 4 * R * R * (o[0] * o[0] + o[1] * o[1]);
+
+  // float a4 = 1.0;
+  float a[5];
+  a[4] = k1*k1;
+  a[3] = 2*k1*k2;
+  a[2] = 2.0 * k1 * k3 + k2 * k2 - q;
+  a[1] = 2.0 * k2 * k3 - p;
+  a[0] = k3 * k3 - s;
+
+  float roots[4];
+  int n = SolveQuartic(a, roots);  // your favourite solver
+  if (n == 0) return 0;
+
+  float tMin = INFINITY;
+  for (int i = 0; i < n; ++i)
+    if (roots[i] > 0.0 && roots[i] < tMin) tMin = roots[i];
+  if (tMin == INFINITY) return 0;
+
+  return 1;
+}
+
 void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
                            uint16_t x_offset, uint16_t y, uint16_t width) {
   // Bounds checking
@@ -259,6 +487,9 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
   const float sB = renderer->sB;
   const float cB = renderer->cB;
   
+  int torus_i = (~x_offset + y ^ renderer->frame_count) & 0x3;
+  int torus_hit = 0;
+  uint16_t torus_color = 0;
   for (uint16_t i = 0; i < width; i++) {
     float rdx = (x_offset + i - 120) * inv_120;
 
@@ -271,12 +502,31 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
     // (0, 21, 63) : (42, 42, 42)
     uint16_t color = (xcheck2 ^ ycheck) ? bg0 : bg1;
 
+#if 1
     // ray marching
     float t = drawdist - r2 - r1 * 1.5;
     float px = rdx * t + rox;
     float py = rdy * t + roy;
     float pz = rdz * t + roz;
-    for (int j = 0; j < 20; j++) {
+
+    {
+      float tMin = (-rdx*rox - rdy*roy) / (rdx*rdx + rdy*rdy);
+      float px = rdx * tMin + rox;
+      float py = rdy * tMin + roy;
+      float dmin = px * px + py * py;
+      if (dmin > (r1+r2)*(r1+r2)) {
+        goto nohit;
+      }
+    }
+    if (torus_i < 3) {
+      torus_i++;
+      if (torus_hit) {
+        color = torus_color;
+      }
+    } else {
+      torus_i = 0;
+      torus_hit = 0;
+      for (int j = 0; j < 10; j++) {
       // Optimized ray marching with reduced function calls
       float lxy = px * px + py * py;
       lxy = sqrtf(lxy);
@@ -292,6 +542,8 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
       pz += rdz * dt;
 
       if (dt > -0.05f && dt < 0.05f) {
+        // color = BADGE_RGB565(255, 0, 0);
+#if 1
         // Optimized normal calculation
         float inv_lxy = 1.0f / lxy;
         float Nx = px * (1.0f - r1 * inv_lxy);
@@ -314,10 +566,15 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
           int r = (palette1_r[k] * (256 - palette) + palette2_r[k] * palette) >> 8;
           int g = (palette1_g[k] * (256 - palette) + palette2_g[k] * palette) >> 8;
           int b = (palette1_b[k] * (256 - palette) + palette2_b[k] * palette) >> 8;
-          color = BADGE_RGB565(r, g, b);
+          torus_color = BADGE_RGB565(r, g, b);
+          color = torus_color;
+          torus_hit = 1;
         } else {
           color = 0x0000;
+          torus_color = 0x0000;
+          torus_hit = 1;
         }
+#endif
         break;
       }
 
@@ -326,7 +583,58 @@ void badge_render_scanline(badge_renderer_t *renderer, badge_color_t *pixels,
         break;
       }
     }
+  }
 
+#else
+#if 1
+
+    // torus
+    float o[3] = {rox, roy, roz};
+    float d[3] = {rdx, rdy, rdz};
+    float t;
+    if (r1 == 0) {
+      if (!intersectSphere(o, d, r2, &t)) {
+        goto nohit;
+      }
+    } else {
+      if (!intersectTorus(o, d, r1, r2, &t)) {
+        goto nohit;
+      }
+    }
+      //color = BADGE_RGB565(255, 0, 0);
+#if 1
+      float px = rdx * t + rox;
+      float py = rdy * t + roy;
+      float pz = rdz * t + roz;
+      float inv_lxy = 1.0f / sqrtf(px * px + py * py);
+      float Nx = px * inv_lxy;
+      float Ny = py * inv_lxy;
+      float Nz = pz;
+      float Nmag = 1.0f / r2;
+
+      float d1 = sqrtf(px * px + py * py) - r1;
+      float rxy = fast_atan2f(py, px);
+      float rxz = fast_atan2f(pz, d1);
+      int lxyi = (int)(rxy * 256.0f / M_PI);
+      int lxzi = (int)(rxz * 256.0f / M_PI);
+      float check_xy = (lxyi ^ lxzi) & 0x20 ? 1.0f + palette * (1.0f / 256.0f) : 0.0f;
+
+      float l = Nmag * 0.6f * (0.2f + Nx * Lx + Ny * Ly + Nz * Lz + check_xy);
+      if (l > 0) {
+        if (l > 1.0f) l = 1.0f;
+        int k = (int)(l * (NPALETTE - 1));
+        int r = (palette1_r[k] * (256 - palette) + palette2_r[k] * palette) >> 8;
+        int g = (palette1_g[k] * (256 - palette) + palette2_g[k] * palette) >> 8;
+        int b = (palette1_b[k] * (256 - palette) + palette2_b[k] * palette) >> 8;
+        color = BADGE_RGB565(r, g, b);
+      } else {
+        color = 0x0000;
+      }
+#endif
+#endif
+#endif
+
+    nohit:
     pixels[i] = color;
 
     xcheck += ooy;

@@ -1,8 +1,10 @@
 #include "badge_main.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 
 
 /*
@@ -78,35 +80,109 @@ bool badge_init(badge_context_t *ctx) {
   // Initialize renderer (no framebuffer needed for embedded)
   badge_renderer_init(&ctx->renderer);
 
+  // Initialize core synchronization
+  ctx->cores_running = false;
+
   // Initialize application state
-  //ctx->frame_count = 0;
+  ctx->frame_count = 0;
   ctx->running = true;
   ctx->use_buffer_a = true;  // Start with buffer A
 
   printf("Badge initialized successfully\n");
-  printf("Double buffered DMA rendering enabled\n");
+  printf("Streaming dual-core DMA rendering enabled\n");
   return true;
+}
+
+// Core 1 worker function for rendering
+void core1_worker(void) {
+  // Get the context from core 0
+  badge_context_t *ctx = (badge_context_t *)multicore_fifo_pop_blocking();
+  
+  printf("Core 1 worker started\n");
+  
+  // Core 1 will render scanlines on demand
+  uint16_t cur_y = ~0;
+  while (ctx->cores_running) {
+    //printf("Core 1 waiting for scanline request...\n");
+    // Wait for scanline request from core 0
+    uint32_t scanline_request = multicore_fifo_pop_blocking();
+    uint16_t y = (uint16_t)(scanline_request);
+    uint16_t x_offset = BADGE_MASK_X_OFFSET(y);
+    uint16_t width = BADGE_MASK_X_WIDTH(y);
+    
+    //printf("Core 1 rendering scanline %d\n", y);
+    // Render the scanline
+    if (y != cur_y) {
+      cur_y = y;
+      badge_render_scanline(&ctx->renderer, ctx->scanline_buffer_b, x_offset, y, width);
+    }
+    gc9a01_dma_wait(&ctx->display);
+    gc9a01_write_scanline_dma(&ctx->display, ctx->scanline_buffer_b, x_offset, y, width);
+    
+    //printf("Core 1 completed scanline %d\n", y);
+    // Signal completion
+    multicore_fifo_push_blocking(scanline_request);
+
+    // pre-render expected next scanline
+    if (y <= 237) {
+      y += 2;
+      x_offset = BADGE_MASK_X_OFFSET(y);
+      width = BADGE_MASK_X_WIDTH(y);
+      badge_render_scanline(&ctx->renderer, ctx->scanline_buffer_b, x_offset, y, width);
+      cur_y = y;
+    }
+  }
+}
+
+bool badge_start_render_threads(badge_context_t *ctx) {
+  // Launch core 1 with rendering worker
+  multicore_launch_core1(core1_worker);
+  ctx->cores_running = true;
+  multicore_fifo_push_blocking((uint32_t)ctx);
+  
+  printf("Streaming dual-core rendering started\n");
+  return true;
+}
+
+void badge_stop_render_threads(badge_context_t *ctx) {
+  ctx->cores_running = false;
+  
+  // Wait for core 1 to finish
+  multicore_reset_core1();
+  
+  printf("Streaming dual-core rendering stopped\n");
 }
 
 void badge_run(badge_context_t *ctx) {
   printf("Starting badge main loop\n");
 
+  // Start dual-core rendering
+  badge_start_render_threads(ctx);
+
+  uint64_t start_time = time_us_64();
   while (ctx->running) {
     // Advance frame for animations
     badge_advance_frame(&ctx->renderer);
 
-    badge_render_frame(ctx);
-    //ctx->frame_count++;
+    // Use threaded rendering
+    badge_render_frame_threaded(ctx);
+    ctx->frame_count++;
 
     // Simple frame rate control - approximately 30 FPS
     // sleep_ms(33);
 
     // Print frame count periodically
-    //if (ctx->frame_count % 10 == 0) {  // Every 10 frames
-    //  printf("Frame: %lu, Renderer frame: %lu\n", ctx->frame_count,
-    //         ctx->renderer.frame_count);
-    //}
+    if (ctx->frame_count % 100 == 0) {  // Every 100 frames
+      uint64_t end_time = time_us_64();
+      uint64_t duration = end_time - start_time;
+      printf("Frame: %lu, Renderer frame: %lu, %0.2f fps\n", ctx->frame_count,
+             ctx->renderer.frame_count, 100000000.0f / duration);
+      start_time = end_time;
+    }
   }
+  
+  // Stop threads before shutdown
+  badge_stop_render_threads(ctx);
 }
 
 void badge_shutdown(badge_context_t *ctx) {
@@ -119,6 +195,27 @@ void badge_shutdown(badge_context_t *ctx) {
   // Turn off display
   gc9a01_display_on(&ctx->display, false);
   gc9a01_sleep(&ctx->display, true);
+}
+
+void badge_render_frame_threaded(badge_context_t *ctx) {
+  //printf("Starting frame render...\n");
+  
+  for (uint16_t y = 0; y < BADGE_DISPLAY_HEIGHT; y+=2) {
+    uint16_t x_offset_a = BADGE_MASK_X_OFFSET(y+1);
+    uint16_t width_a = BADGE_MASK_X_WIDTH(y+1);
+    uint16_t x_offset_b = BADGE_MASK_X_OFFSET(y);
+    uint16_t width_b = BADGE_MASK_X_WIDTH(y);
+    
+    //printf("Processing scanline %d,%d\n", y, y+1);
+    multicore_fifo_push_blocking(y); // other core will render scanline y into buffer b
+    // meanwhile we render scanline y+1 into buffer a
+    badge_render_scanline(&ctx->renderer, ctx->scanline_buffer_a, x_offset_a, y+1, width_a);
+    multicore_fifo_pop_blocking();
+    gc9a01_dma_wait(&ctx->display);
+    gc9a01_write_scanline_dma(&ctx->display, ctx->scanline_buffer_b, 
+                                x_offset_a, y+1, width_a);
+  }
+  //printf("Frame render completed\n");
 }
 
 void badge_render_frame(badge_context_t *ctx) {

@@ -15,6 +15,7 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 target_link_libraries(${TARGET_NAME}
     badge_common
     pico_stdlib
+    pico_multicore
     hardware_spi
     hardware_dma
     hardware_gpio

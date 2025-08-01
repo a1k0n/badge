@@ -44,8 +44,22 @@ typedef struct {
   int angleA, angleB;
 } badge_renderer_t;
 
+// Dual-core rendering context
+typedef struct {
+  badge_renderer_t renderer;
+  int thread_id;  // 0 or 1 for the two rendering threads
+} badge_thread_renderer_t;
+
 // Initialize renderer
 void badge_renderer_init(badge_renderer_t *renderer);
+
+// Initialize thread renderer
+void badge_thread_renderer_init(badge_thread_renderer_t *thread_renderer, int thread_id);
+
+// Thread rendering function
+void badge_render_scanline_threaded(badge_thread_renderer_t *thread_renderer, 
+                                   badge_color_t *pixels, uint16_t x_offset, 
+                                   uint16_t y, uint16_t width);
 
 // Advance frame for animations (call once per frame)
 void badge_advance_frame(badge_renderer_t *renderer);

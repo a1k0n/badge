@@ -98,7 +98,7 @@ bool gc9a01_init(gc9a01_t *display, const gc9a01_config_t *config) {
 
   // Set memory access control (MADCTL)
   gc9a01_write_command(display, GC9A01_MADCTL);
-  uint8_t madctl_data = 0x00;  // Normal orientation
+  uint8_t madctl_data = 0x60;  // 90 degree clockwise rotation
   gc9a01_write_data(display, &madctl_data, 1);
 
 
