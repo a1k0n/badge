@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 void benchmark_fpu() {
   uint64_t start = clock();
@@ -72,6 +74,8 @@ bool desktop_init(desktop_context_t *ctx) {
   ctx->running = true;
   ctx->last_frame_time = SDL_GetTicks();
   ctx->target_frame_time = 1000 / 45;
+  ctx->frames_to_dump = 0;
+  ctx->dump_frame_count = 0;
 
   printf("Desktop emulator initialized successfully\n");
   printf("Window size: %dx%d (scale factor: %d)\n", DESKTOP_WINDOW_WIDTH,
@@ -94,6 +98,11 @@ void desktop_run(desktop_context_t *ctx) {
 
     // Advance frame for animations
     badge_advance_frame(&ctx->renderer);
+
+    // Save frame if dumping is enabled
+    if (ctx->frames_to_dump > 0) {
+      desktop_save_frame_ppm(ctx);
+    }
 
     // Update display
     desktop_update_display(ctx);
@@ -199,6 +208,69 @@ void desktop_update_display(desktop_context_t *ctx) {
 
   // Present
   SDL_RenderPresent(ctx->sdl_renderer);
+}
+
+void desktop_save_frame_ppm(desktop_context_t *ctx) {
+  if (ctx->dump_frame_count >= ctx->frames_to_dump) {
+    return;
+  }
+
+  char filename[64];
+  snprintf(filename, sizeof(filename), "frame_%04d.ppm", ctx->dump_frame_count);
+
+  FILE *file = fopen(filename, "wb");
+  if (!file) {
+    printf("Failed to open %s for writing\n", filename);
+    return;
+  }
+
+  // Write PPM header
+  fprintf(file, "P6\n%d %d\n255\n", BADGE_DISPLAY_WIDTH, BADGE_DISPLAY_HEIGHT);
+
+  // Convert and write frame data
+  badge_color_t scanline_buffer[BADGE_DISPLAY_WIDTH];
+  uint8_t rgb888_buffer[BADGE_DISPLAY_WIDTH * 3]; // RGB888 format
+
+  for (int y = 0; y < BADGE_DISPLAY_HEIGHT; y++) {
+    memset(scanline_buffer, 0, BADGE_DISPLAY_WIDTH * sizeof(badge_color_t));
+    uint16_t x_offset = BADGE_MASK_X_OFFSET(y);
+    uint16_t width = BADGE_MASK_X_WIDTH(y);
+    
+    badge_render_scanline(&ctx->renderer, scanline_buffer, x_offset, y, width);
+
+    // Convert scanline to RGB888, handling the circular mask correctly
+    for (int x = 0; x < BADGE_DISPLAY_WIDTH; x++) {
+      badge_color_t rgb565;
+      
+      // Check if this pixel is within the visible area for this scanline
+      if (x >= x_offset && x < x_offset + width) {
+        rgb565 = scanline_buffer[x - x_offset];
+      } else {
+        // Outside the circular mask - use black
+        rgb565 = BADGE_COLOR_BLACK;
+      }
+      
+      // Extract RGB components from RGB565
+      uint8_t r5 = (rgb565 >> 11) & 0x1F;
+      uint8_t g6 = (rgb565 >> 5) & 0x3F;
+      uint8_t b5 = rgb565 & 0x1F;
+
+      // Convert to 8-bit components
+      uint8_t r8 = (r5 << 3) | (r5 >> 2);
+      uint8_t g8 = (g6 << 2) | (g6 >> 4);
+      uint8_t b8 = (b5 << 3) | (b5 >> 2);
+
+      rgb888_buffer[x * 3 + 0] = r8;
+      rgb888_buffer[x * 3 + 1] = g8;
+      rgb888_buffer[x * 3 + 2] = b8;
+    }
+
+    fwrite(rgb888_buffer, 1, BADGE_DISPLAY_WIDTH * 3, file);
+  }
+
+  fclose(file);
+  printf("Saved frame %d to %s\n", ctx->dump_frame_count, filename);
+  ctx->dump_frame_count++;
 }
 
 uint32_t desktop_rgb565_to_rgb888(badge_color_t color) {

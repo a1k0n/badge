@@ -24,6 +24,10 @@ typedef struct {
   // Performance tracking
   uint32_t last_frame_time;
   uint32_t target_frame_time;  // 33ms for ~30 FPS
+
+  // Frame dumping
+  int frames_to_dump;
+  int dump_frame_count;
 } desktop_context_t;
 
 // Application lifecycle
@@ -40,5 +44,8 @@ void desktop_update_display(desktop_context_t *ctx);
 
 // Utility functions
 uint32_t desktop_rgb565_to_rgb888(badge_color_t color);
+
+// Frame dumping
+void desktop_save_frame_ppm(desktop_context_t *ctx);
 
 #endif  // DESKTOP_MAIN_H
