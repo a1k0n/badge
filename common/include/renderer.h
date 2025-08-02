@@ -42,6 +42,9 @@ typedef struct {
   float sB, cB;  // sin/cos of B
 
   int angleA, angleB;
+
+  // font_index[i] filled in when rendering [i*5] if y%7 == 0
+  int font_index[BADGE_DISPLAY_WIDTH/5];
 } badge_renderer_t;
 
 // Dual-core rendering context
